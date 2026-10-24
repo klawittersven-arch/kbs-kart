@@ -341,7 +341,7 @@ const AU={ctx:null,on:true,music:true,
   init(){if(this.ctx){if(this.ctx.state==='suspended')this.ctx.resume();return;}
     try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;this.ctx=new AC();}catch(e){return;}
     const c=this.ctx;this.master=c.createGain();this.master.gain.value=this.on?.55:0;this.master.connect(c.destination);
-    this.sfx=c.createGain();this.sfx.gain.value=.9;this.sfx.connect(this.master);
+    this.sfx=c.createGain();this.sfx.gain.value=1.7;this.sfx.connect(this.master);
     this.mus=c.createGain();this.mus.gain.value=this.music?.4:0;this.mus.connect(this.master);
     const b=c.createBuffer(1,c.sampleRate,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;this.nb=b;
     const o1=c.createOscillator(),o2=c.createOscillator(),f=c.createBiquadFilter(),g=c.createGain();o1.type='sawtooth';o2.type='square';f.type='lowpass';f.frequency.value=600;g.gain.value=0;o1.connect(f);o2.connect(f);f.connect(g);g.connect(this.sfx);o1.start();o2.start();this.eng={o1,o2,f,g};
@@ -405,7 +405,7 @@ const MUS={song:-1,step:0,next:0,rate:1,
   play(i){if(this.song===i)return;this.song=i;this.step=0;this.rate=1;if(AU.ctx)this.next=AU.ctx.currentTime+.08;},
   stop(){this.song=-1;},
   update(){const c=AU.ctx;if(!c||this.song<0||!AU.music)return;if(this.next<c.currentTime)this.next=c.currentTime+.03;const s=SONGS[this.song],dt=60/(s.bpm*this.rate)/4;
-    while(this.next<c.currentTime+.15){const st=this.step,t=this.next-c.currentTime,b=s.bass[st%s.bass.length],l=s.lead[st%s.lead.length],d=s.drum[st%s.drum.length];
+    while(this.next<c.currentTime+.25){const st=this.step,t=this.next-c.currentTime,b=s.bass[st%s.bass.length],l=s.lead[st%s.lead.length],d=s.drum[st%s.drum.length];
       if(b)AU.tone('triangle',mf(b),mf(b),dt*1.8,.16,t,AU.mus);
       if(l)AU.tone('square',mf(l),mf(l),dt*1.6,.045,t,AU.mus);
       if(d==='k')AU.tone('sine',150,40,.12,.3,t,AU.mus);else if(d==='s')AU.noise(.12,.1,'bandpass',1800,t,AU.mus);else if(d==='h')AU.noise(.03,.05,'highpass',7000,t,AU.mus);
@@ -427,7 +427,7 @@ function playerInput(){
   if(gp.steer)steer=gp.steer;
   const upKey=keys.has('ArrowUp')||keys.has('KeyW');
   if(upKey)upFresh++;else upFresh=0;
-  const autoGas=S.autoGas===true||(S.autoGas===null&&usingTouch);
+  const autoGas=(R&&R.cfg.autoGas)||S.autoGas===true||(S.autoGas===null&&usingTouch);
   const manualGas=down('gas')||touch.gas||gp.gas;
   const gas=manualGas||(autoGas&&!(touch.brake||down('brake')||gp.brake));
   const brake=down('brake')||touch.brake||gp.brake;
@@ -760,6 +760,12 @@ function netTick(){const k=R.player;if(!k||!R.net||R.state==='intro')return;if(R
 function applyState(k,s){
   if(!Array.isArray(s)||s.length<29)return;
   const n=k.net||(k.net={});
+  if(!R.player&&n.init){
+    if((s[14]|0)>0&&k.spin<=0)SFX.hit();
+    if((s[15]|0)>0&&k.fall<=0)SFX.fall();
+    if((s[8]|0)>k.boost+10)SFX.boost();
+    if((s[19]|0)>k.coins)SFX.coin();
+  }
   n.x=+s[0]||0;n.y=+s[1]||0;n.a=+s[2]||0;n.vx=+s[5]||0;n.vy=+s[6]||0;n.at=performance.now();
   k.z=+s[3]||0;k.speed=+s[4]||0;k.vx=n.vx;k.vy=n.vy;k.drift=s[7]|0;k.boost=s[8]|0;k.bKind=s[9]|0||1;k.star=s[10]|0;k.ghost=s[11]|0;k.small=s[12]|0;k.squish=s[13]|0;
   k.spin=s[14]|0;k.fall=s[15]|0;k.fallMax=(s[16]|0)||100;k.inv=s[17]|0;k.lap=s[18]|0;k.coins=s[19]|0;
@@ -846,7 +852,7 @@ function tickRace(){
     R.cd--;
     if(R.cfg.mode!=='attract'){
       if(R.cd===150||R.cd===100||R.cd===50)SFX.beep();
-      if(R.player){const g=pin&&pin.manualGas;if(g&&!R.player.prevGas)R.player.gasAt=R.cd;if(!g)R.player.gasAt=-1;R.player.prevGas=g;}
+      if(R.player){const g=pin&&(pin.manualGas||(R.cfg.autoGas&&pin.hop));if(g&&!R.player.prevGas)R.player.gasAt=R.cd;if(!g)R.player.gasAt=-1;R.player.prevGas=g;}
     }
     if(R.cd<=0){R.state='run';R.t=0;
       if(R.cfg.mode!=='attract')SFX.go();
@@ -1253,7 +1259,7 @@ function tick(){
     if(screenName==='race'||screenName==='result'||R.cfg.mode==='attract'||screenName==='gpend'||R.cfg.alwaysTick)tickRace();
   }
   MUS.update();
-  const k=R&&R.player;
+  const k=R&&(R.player||(R.cfg.mode==='duel'&&!R.player?R.karts.reduce((a,b)=>b.speed>a.speed?b:a):null));
   AU.engine(k?k.speed:0,k&&k.boost>0,!!(k&&!paused&&screenName==='race'&&AU.on));
   updateHud();msgTick();
   if(HK.tick)HK.tick();
@@ -1268,6 +1274,7 @@ function frame(now){
 // ---------- Ereignisse
 function onEl(sel,ev,fn){const el=$(sel);if(el)el.addEventListener(ev,fn);}
 addEventListener('keydown',e=>{
+  const tg=e.target;if(tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA'||tg.tagName==='SELECT'||tg.isContentEditable))return;
   AU.init();
   if(menuOpen()){
     const map={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};

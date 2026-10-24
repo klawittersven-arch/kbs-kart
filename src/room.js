@@ -125,19 +125,15 @@ export class RoomLogic {
         await this.persist(); this.pushTeachers(); return;
       }
       case 'duel-setup': {
-        const a = String(msg.a || ''), b = String(msg.b || '');
-        if (!s.players[a] || !s.players[b] || a === b) return conn.send({ t: 'error', why: 'duel-players' });
-        s.duel = {
-          p: [a, b], names: [s.players[a].name, s.players[b].name],
-          chars: [int(msg.ca, 0, CHAR_COUNT - 1, s.players[a].char), int(msg.cb, 0, CHAR_COUNT - 1, s.players[b].char)],
-          track: int(msg.track, 0, TRACK_COUNT - 1, 0), laps: int(msg.laps, 1, 5, 3),
-          state: 'ready', startAt: 0, fin: [null, null], winner: -1, round: (s.duel && s.duel.round || 0) + 1,
-        };
+        if (!this.applyDuel(s, msg)) return conn.send({ t: 'error', why: 'duel-players' });
         s.phase = 'duel-setup';
         await this.persist(); this.pushAll(); return;
       }
       case 'duel-start': {
-        const d = s.duel; if (!d || s.phase !== 'duel-setup') return;
+        if (s.phase !== 'duel-setup') return;
+        // Die Lehrkraft schickt ihre aktuelle Auswahl mit: genau diese wird gefahren
+        if (msg.a && msg.b && !this.applyDuel(s, msg)) return conn.send({ t: 'error', why: 'duel-players' });
+        const d = s.duel; if (!d) return;
         const on = this.online();
         if (!on.has(d.p[0]) || !on.has(d.p[1])) return conn.send({ t: 'error', why: 'duel-offline' });
         d.state = 'running'; d.startAt = this.io.now() + 5500; d.fin = [null, null]; d.winner = -1;
@@ -157,6 +153,18 @@ export class RoomLogic {
         this.s = null; await this.io.wipe(); return;
       }
     }
+  }
+
+  applyDuel(s, msg) {
+    const a = String(msg.a || ''), b = String(msg.b || '');
+    if (!s.players[a] || !s.players[b] || a === b) return false;
+    s.duel = {
+      p: [a, b], names: [s.players[a].name, s.players[b].name],
+      chars: [int(msg.ca, 0, CHAR_COUNT - 1, s.players[a].char), int(msg.cb, 0, CHAR_COUNT - 1, s.players[b].char)],
+      track: int(msg.track, 0, TRACK_COUNT - 1, 0), laps: int(msg.laps, 1, 5, 3),
+      state: 'ready', startAt: 0, fin: [null, null], winner: -1, round: (s.duel && s.duel.round || 0) + 1,
+    };
+    return true;
   }
 
   async playerMsg(conn, msg, s, pid) {
@@ -196,9 +204,7 @@ export class RoomLogic {
         const slot = d.p.indexOf(pid); if (slot < 0 || d.fin[slot] != null) return;
         const time = Number(msg.time); if (!(time > 0)) return;
         d.fin[slot] = Math.round(time);
-        if (d.fin[0] != null && d.fin[1] != null) {
-          d.winner = d.fin[0] <= d.fin[1] ? 0 : 1; d.state = 'done'; s.phase = 'podium';
-        }
+        d.winner = slot; d.state = 'done'; s.phase = 'podium';
         await this.persist(); this.pushAll(); return;
       }
     }

@@ -8,7 +8,7 @@
   const lapsTxt = n => n + ' ' + (n === 1 ? 'Runde' : 'Runden');
 
   let sess = U.store('kbs.teacher');
-  let net = null, room = null, screen = '', spect = null, podiumRound = 0, endTimer = 0;
+  let net = null, room = null, screen = '', spect = null, podiumRound = 0;
   const setup = Object.assign({ track: 0, laps: 2, char: -1, reset: true }, U.store('kbs.teacher.setup') || {});
 
   // ---------------------------------------------------------------- Verbindung
@@ -38,7 +38,8 @@
       case 'ended': room = null; screen = ''; break;
     }
   }
-  function send(obj) { if (!net.send(obj)) toast('Keine Verbindung zum Server. Es wird neu verbunden …'); }
+  // Wichtige Befehle gehen nie verloren: ohne Verbindung warten sie, bis sie wieder steht
+  function send(obj) { if (!net.send(obj, true)) toast('Keine Verbindung zum Server. Die Änderung wird gesendet, sobald die Verbindung wieder steht.'); }
   let toastT = 0;
   function toast(t) { toastEl.textContent = t; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => toastEl.hidden = true, 4200); }
 
@@ -82,6 +83,7 @@
     const set = v => { val = Math.max(min, Math.min(max, v)); out.textContent = lapsTxt(val); minus.disabled = val <= min; plus.disabled = val >= max; onChange(val); };
     minus.onclick = () => set(val - 1); plus.onclick = () => set(val + 1);
     minus.disabled = val <= min; plus.disabled = val >= max;
+    w.setValue = v => { val = Math.max(min, Math.min(max, v)); out.textContent = lapsTxt(val); minus.disabled = val <= min; plus.disabled = val >= max; };
     return w;
   }
   function stopSpectate() {
@@ -95,12 +97,17 @@
     if (!room) return;
     codeChip.textContent = 'Code ' + room.code;
     const ph = room.phase;
-    if (ph !== 'duel') { clearTimeout(endTimer); endTimer = 0; }
     if (ph === 'setup') { stopSpectate(); if (screen !== 'setup') renderSetup(); else updateSetupCount(); }
     else if (ph === 'quali') { stopSpectate(); if (screen !== 'quali') renderQuali(); else updateQuali(); }
     else if (ph === 'duel-setup') { stopSpectate(); if (screen !== 'duel-setup') renderDuelSetup(); else updateDuelSetup(); }
     else if (ph === 'duel') { if (!spect || spect.round !== room.duel.round) startSpectate(); else updateSpectate(); }
-    else if (ph === 'podium') { stopSpectate(); if (screen !== 'podium' || podiumRound !== room.duel.round) renderPodium(); }
+    else if (ph === 'podium') {
+      if (spect && spect.round === room.duel.round) {
+        if (!spect.ending) { spect.ending = true; showFinish(); setTimeout(() => { stopSpectate(); if (room && room.phase === 'podium') renderPodium(); }, 2000); }
+        return;
+      }
+      stopSpectate(); if (screen !== 'podium' || podiumRound !== room.duel.round) renderPodium();
+    }
   }
 
   // ---------- 1. Qualifying einrichten
@@ -160,11 +167,13 @@
         <ol class="ranking" id="ranking"></ol>
         <div class="tactions">
           <button class="ghost-btn" id="btnSettings">Einstellungen ändern</button>
+          <button class="ghost-btn" id="btnRestart">Qualifying neu starten</button>
           <button class="big-btn" id="btnFinal">Finale einrichten</button>
         </div>
       </div></div>`;
     drawQR($('#qr'), joinUrl());
     $('#btnSettings').onclick = () => send({ t: 'phase', phase: 'setup' });
+    $('#btnRestart').onclick = confirmRestart;
     $('#btnFinal').onclick = openDuelSetup;
     updateQuali();
   }
@@ -189,6 +198,15 @@
     ol.querySelectorAll('canvas[data-c]').forEach(c => { const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(KK.KSPR[+c.dataset.c][6], 0, 0); });
     ol.querySelectorAll('.kick').forEach(b => b.onclick = () => { const li = b.closest('li'); confirmKick(li.dataset.pid, li.querySelector('.nm').textContent); });
   }
+  function confirmRestart() {
+    const q = room.quali, n = room.players.length;
+    const go = () => { toastEl.hidden = true; KK.AU.init(); send({ t: 'quali-open', track: q.track, laps: q.laps, char: q.char, reset: true }); screen = ''; };
+    if (!n) return go();
+    toastEl.innerHTML = `Neues Qualifying mit denselben Einstellungen starten? Die ${n === 1 ? 'eine Zeit wird' : n + ' Anmeldungen und Zeiten werden'} gelöscht. <button class="mini" id="rYes">Neu starten</button> <button class="mini ghost" id="rNo">Abbrechen</button>`;
+    toastEl.hidden = false; clearTimeout(toastT);
+    $('#rYes').onclick = go;
+    $('#rNo').onclick = () => { toastEl.hidden = true; };
+  }
   function confirmKick(pid, name) {
     toastEl.innerHTML = `${esc(name)} aus der Liste entfernen? <button class="mini" id="kYes">Entfernen</button> <button class="mini ghost" id="kNo">Abbrechen</button>`;
     toastEl.hidden = false; clearTimeout(toastT);
@@ -197,7 +215,17 @@
   }
 
   // ---------- 3. Finale einrichten
-  let duelForm = null;
+  let duelForm = null, dirtyAt = 0;
+  // Zeigt am Beamer genau das, was der Server gespeichert hat (außer direkt nach einer eigenen Änderung)
+  function syncDuelForm(d) {
+    duelForm = { a: d.p[0], b: d.p[1], ca: d.chars[0], cb: d.chars[1], track: d.track, laps: d.laps };
+    document.querySelectorAll('#slotTracks .trk').forEach((x, j) => x.setAttribute('aria-checked', String(j === d.track)));
+    const st = document.querySelector('#slotLaps .stepper'); if (st && st.setValue) st.setValue(d.laps);
+    [0, 1].forEach(s => {
+      document.querySelectorAll('#figs' + s + ' .fig').forEach((x, j) => x.setAttribute('aria-checked', String(j === d.chars[s])));
+      const sel = $('#selP' + s); if (sel && sel.value !== d.p[s]) sel.value = d.p[s];
+    });
+  }
   function openDuelSetup() {
     const fin = room.players.filter(p => p.total != null).sort((a, b) => a.total - b.total);
     const pool = fin.length >= 2 ? fin : fin.concat(room.players.filter(p => p.total == null));
@@ -227,7 +255,7 @@
         <span class="hint" id="startHint"></span>
         <button class="big-btn" id="btnStart">Rennen starten</button>
       </div></div>`;
-    const apply = () => send({ t: 'duel-setup', ...duelForm });
+    const apply = () => { dirtyAt = Date.now(); send({ t: 'duel-setup', ...duelForm }); };
     [0, 1].forEach(s => {
       $('#figs' + s).appendChild(charPicker(s ? duelForm.cb : duelForm.ca, false, i => { if (s) duelForm.cb = i; else duelForm.ca = i; apply(); }));
       $('#selP' + s).onchange = e => {
@@ -240,11 +268,12 @@
     $('#slotTracks').appendChild(trackPicker(duelForm.track, i => { duelForm.track = i; apply(); }));
     $('#slotLaps').appendChild(stepper(duelForm.laps, 1, 5, v => { duelForm.laps = v; apply(); }));
     $('#btnBackQ').onclick = () => send({ t: 'phase', phase: 'quali' });
-    $('#btnStart').onclick = () => { KK.AU.init(); send({ t: 'duel-start' }); };
+    $('#btnStart').onclick = () => { KK.AU.init(); dirtyAt = Date.now(); send({ t: 'duel-start', ...duelForm }); };
     updateDuelSetup();
   }
   function updateDuelSetup() {
     const d = room.duel; if (!d) return;
+    if (Date.now() - dirtyAt > 1500) syncDuelForm(d);
     [0, 1].forEach(s => {
       const el = $('#on' + s); if (!el) return;
       el.className = 'online ' + (d.online[s] ? 'yes' : 'no');
@@ -266,7 +295,7 @@
           <div class="svbar"><span class="svname">${esc(d.names[s])}</span><span class="svlap" id="lap${s}"></span><span class="svpos" id="pos${s}"></span></div>
           <div class="svstage"><canvas id="cv${s}" width="480" height="320"></canvas><div class="svfin" id="fin${s}" hidden></div></div></div>`).join('')}
       </div>
-      <div class="specfoot"><span class="eyebrow">Finale · ${esc(T[d.track].name)} · ${lapsTxt(d.laps)}</span><span class="hint" id="endHint"></span><button class="ghost-btn" id="btnEnd">Rennen beenden</button></div></div>`;
+      <div class="specfoot"><span class="eyebrow">Finale · ${esc(T[d.track].name)} · ${lapsTxt(d.laps)}</span><button class="ghost-btn" id="btnEnd">Rennen beenden</button></div></div>`;
     const R = KK.startNet({ mode: 'duel', track: d.track, laps: d.laps, cc: 150, grid: d.chars.slice(), localSlot: -1, names: d.names.slice(), noPause: true, tags: true, alwaysTick: true });
     const ms = d.startAt - net.serverNow();
     R.cd = Math.max(30, Math.min(420, Math.round(ms / (1000 / 60))));
@@ -274,25 +303,22 @@
     spect = { round: d.round, views };
     KK.H.render = () => { if (KK.R) { KK.renderView(views[0]); KK.renderView(views[1]); } };
     let n = 0;
-    KK.H.tick = () => { if (++n % 8) return; const R2 = KK.R; if (!R2) return; [0, 1].forEach(s => { const k = R2.karts[s]; $('#lap' + s).textContent = 'Runde ' + Math.max(1, Math.min(R2.laps, k.lap)) + '/' + R2.laps; $('#pos' + s).textContent = k.place + '.'; }); };
+    KK.H.tick = () => { if (++n % 8) return; const R2 = KK.R; if (!R2) return; lastLeader = R2.karts[0].place <= R2.karts[1].place ? 0 : 1; [0, 1].forEach(s => { const k = R2.karts[s]; $('#lap' + s).textContent = 'Runde ' + Math.max(1, Math.min(R2.laps, k.lap)) + '/' + R2.laps; $('#pos' + s).textContent = k.place + '.'; }); };
     $('#btnEnd').onclick = () => endDuel();
     updateSpectate();
   }
-  function leader() { const R = KK.R; if (!R) return -1; return R.karts[0].place <= R.karts[1].place ? 0 : 1; }
+  let lastLeader = 0;
+  function leader() { const R = KK.R; if (!R) return lastLeader; return R.karts[0].place <= R.karts[1].place ? 0 : 1; }
   function endDuel() { send({ t: 'duel-end', winner: leader() }); }
-  function updateSpectate() {
-    const d = room.duel; if (!d) return;
-    [0, 1].forEach(s => { const el = $('#fin' + s); if (el && d.fin[s] != null) { el.hidden = false; el.textContent = 'Ziel · ' + KK.fmt(d.fin[s]); } });
-    const one = (d.fin[0] != null) !== (d.fin[1] != null);
-    if (one && !endTimer) {
-      let left = 25;
-      const tickDown = () => {
-        const h = $('#endHint'); if (h) h.textContent = 'Rennen endet automatisch in ' + left + ' s';
-        if (left-- <= 0) { endTimer = 0; endDuel(); return; }
-        endTimer = setTimeout(tickDown, 1000);
-      };
-      tickDown();
-    }
+  function updateSpectate() {}
+  function showFinish() {
+    const d = room.duel;
+    [0, 1].forEach(s => {
+      const el = $('#fin' + s); if (!el) return;
+      el.hidden = false; el.classList.toggle('win', s === d.winner);
+      el.textContent = s === d.winner ? 'Ziel! ' + (d.fin[s] != null ? KK.fmt(d.fin[s]) : '') : (d.winner >= 0 ? '2. Platz' : 'Ende');
+    });
+    KK.SFX.final();
   }
 
   // ---------- 5. Siegerehrung
@@ -352,7 +378,7 @@
       for (const c of conf) { const y = ((c.y + c.v * t) % (H + 10)) - 10, x = Math.round(c.x + Math.sin(t * 2 + c.ph) * 4); g.fillStyle = c.c; if (Math.sin(t * 6 + c.ph) > 0) g.fillRect(x, Math.round(y), 3, 2); else g.fillRect(x, Math.round(y), 2, 3); }
     }
     function loop(now) { if (!cv.isConnected) return; draw((now - t0) / 1000); requestAnimationFrame(loop); }
-    if (reduce) draw(0); else requestAnimationFrame(loop);
+    draw(0); if (!reduce) requestAnimationFrame(loop);
   }
 
   // ---------------------------------------------------------------- Sitzung

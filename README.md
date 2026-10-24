@@ -42,16 +42,18 @@ Voraussetzung: ein kostenloses Cloudflare-Konto und dieses Repository bei GitHub
 3. **Die SuS scannen den QR-Code**, geben Vornamen und den ersten Buchstaben des Nachnamens ein (z. B. „Lena K.“), wählen ihre Figur und tippen auf **Los geht's!**. Das Rennen startet sofort auf dem Handy.
    - Gefahren wird im Zeitfahren mit 3× Turbo, wie im Einzelspiel.
    - Während des Rennens ist das Handy **nicht** mit dem Server verbunden. Erst im Ziel wird die Gesamtzeit einmal gesendet. Das schont das Schul-WLAN.
-4. **Die Zeiten erscheinen live am Beamer**, sortiert nach Gesamtzeit. Unpassende Namen entfernst du mit dem **×** neben dem Eintrag.
+4. **Die Zeiten erscheinen live am Beamer**, sortiert nach Gesamtzeit. Unpassende Namen entfernst du mit dem **×** neben dem Eintrag. Mit **Qualifying neu starten** beginnt eine neue Runde mit denselben Einstellungen und demselben QR-Code; die bisherigen Zeiten werden dabei gelöscht.
 5. **Finale einrichten:** Die zwei Schnellsten sind vorausgewählt, alle anderen Handys werden getrennt. Fahrer, Figuren, Strecke und Rundenzahl lassen sich noch ändern. Sobald beide Handys als „verbunden“ angezeigt werden: **Rennen starten**.
 6. **Live-Duell:** Beide fahren gleichzeitig auf ihrem Handy. Der Beamer zeigt beide Sichten nebeneinander mit Namen. Rempeln, Items, Blitz und Phantom wirken zwischen den beiden.
-   - Ist einer im Ziel, endet das Rennen spätestens 25 Sekunden später automatisch.
+   - Wer zuerst im Ziel ist, gewinnt. Zwei Sekunden später erscheint automatisch die Siegerehrung.
    - Mit **Rennen beenden** brichst du jederzeit ab. Dann gewinnt, wer gerade vorne liegt.
 7. **Siegerehrung** am Beamer: großes Spielerbild mit Pokal und Namen. Danach **Revanche**, **Anderes Finale** oder **Zurück zum Qualifying**.
 
 **Tipps**
 - Im Finale die Handys **quer** halten, dann liegen die Tasten links und rechts vom Bild.
-- Auf dem Handy ist **Auto-Gas** eingeschaltet. Für den Raketenstart beim dritten roten Licht auf **A** tippen.
+- Im Klassenmodus gibt das Spiel **immer automatisch Gas**. Raketenstart: beim dritten roten Licht **R** tippen (am Laptop: Leertaste).
+- Auf den Handys läuft keine Musik, nur Soundeffekte. Musik und Geräusche des Finales kommen vom Beamer-Laptop.
+- SuS können auch am Laptop mitfahren. Steuerung: Pfeiltasten ← → lenken, ↓ bremsen, Leertaste hüpfen und driften, E für Items.
 - **Mehrere Klassen gleichzeitig:** Jede Lehrkraft öffnet einfach `/lehrer` und bekommt einen eigenen Code und QR-Code. Die Räume sind voneinander getrennt.
 - Wer die Seite versehentlich schließt, scannt den QR-Code noch einmal. Das Handy wird wiedererkannt, solange derselbe Browser benutzt wird.
 - **Sitzung → Neue Sitzung** erzeugt einen neuen Code, zum Beispiel für die nächste Klasse.

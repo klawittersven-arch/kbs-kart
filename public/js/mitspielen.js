@@ -12,7 +12,10 @@
   if (!pid || !/^[a-z0-9]{8,24}$/.test(pid)) { pid = U.randomId(16); U.store('kbs.pid', pid); }
 
   let net = null, you = null, view = '', racing = null, duelRound = 0, localDuelDone = false, released = false;
-  const form = { first: '', initial: '', char: 0, err: '' };
+  const lastName = U.store('kbs.name') || {};
+  const form = { first: lastName.first || '', initial: lastName.initial || '', char: lastName.char | 0, err: '' };
+  // Auf Handys und Laptops der SuS läuft nie Musik, nur Soundeffekte
+  KK.AU.music = false;
   const resKey = () => 'kbs.res.' + code;
 
   // ---------------------------------------------------------------- Verbindung
@@ -128,6 +131,7 @@
     setPanel(`<form class="card" id="nameForm" novalidate>
       <h2>Qualifying</h2>
       <p><strong>${esc(trackName(q.track))}</strong> · ${q.laps} ${q.laps === 1 ? 'Runde' : 'Runden'} · Zeitfahren mit 3× Turbo. Deine Gesamtzeit erscheint am Beamer.</p>
+      <p class="hint">Gas gibt das Spiel automatisch. Raketenstart: Tippe <b>R</b>, wenn das dritte rote Licht angeht.</p>
       <div class="row">
         <div class="field grow"><label for="inFirst">Vorname</label><input id="inFirst" autocomplete="given-name" maxlength="16" value="${esc(form.first)}" required></div>
         <div class="field initial"><label for="inInit">Nachname</label><input id="inInit" maxlength="1" autocapitalize="characters" autocomplete="off" value="${esc(form.initial)}" placeholder="K" required></div>
@@ -185,6 +189,7 @@
       if (!you || you.phase !== 'quali') return update();
       view = 'joining';
       $('#btnGo').disabled = true; $('#btnGo').textContent = 'Melde an …';
+      U.store('kbs.name', { first: form.first.trim(), initial: form.initial.trim(), char: form.char });
       net.send({ t: 'join', first: form.first.trim(), initial: form.initial.trim(), char: form.char }, true);
     };
   }
@@ -221,7 +226,7 @@
       <h2>Du fährst im Finale!</h2>
       <div class="versus"><div><canvas width="80" height="80" id="pv0"></canvas><b>${esc(d.names[d.slot])}</b><span>Du</span></div><em>gegen</em><div><canvas width="80" height="80" id="pv1"></canvas><b>${esc(opp)}</b><span>Gegner</span></div></div>
       <p><strong>${esc(trackName(d.track))}</strong> · ${d.laps} ${d.laps === 1 ? 'Runde' : 'Runden'} · mit Items. Das Rennen startet, sobald deine Lehrkraft am Beamer auf „Rennen starten“ drückt.</p>
-      <p class="hint">Tipp: Halte dein Handy quer, dann sind die Tasten links und rechts.</p>
+      <p class="hint">Tipp: Halte dein Handy quer, dann sind die Tasten links und rechts. Gas gibt das Spiel automatisch, Raketenstart mit <b>R</b> beim dritten roten Licht.</p>
       <button class="ghost-btn" id="btnSnd">Ton testen</button></div>`);
     portrait($('#pv0'), d.chars[d.slot]); portrait($('#pv1'), d.chars[1 - d.slot]);
     $('#btnSnd').onclick = () => { KK.AU.init(); KK.SFX.ok(); };
@@ -239,9 +244,9 @@
   }
 
   // ---------------------------------------------------------------- Rennen
-  function showConsole() { panel.hidden = true; consoleEl.hidden = false; raceNote.hidden = true; document.body.classList.add('racing'); }
+  function showConsole() { panel.hidden = true; consoleEl.hidden = false; raceNote.hidden = true; document.body.classList.add('racing'); $('#keys').hidden = KK.usingTouch; }
   function stopRace() {
-    racing = null; KK.H.onFinish = null; KK.H.onPost = null; document.body.classList.remove('racing');
+    racing = null; KK.H.onFinish = null; KK.H.onPost = null; document.body.classList.remove('racing'); $('#keys').hidden = true;
     if (KK.R) { KK.R = null; KK.MUS.stop(); }
     KK.setScreen('idle');
   }
@@ -250,7 +255,7 @@
     const me = you.me, q = you.quali;
     racing = 'quali'; view = 'race';
     showConsole();
-    const R = KK.startNet({ mode: 'quali', track: q.track, laps: q.laps, cc: 150, grid: [me.char], player: me.char, localSlot: 0, noPause: true });
+    const R = KK.startNet({ mode: 'quali', track: q.track, laps: q.laps, cc: 150, grid: [me.char], player: me.char, localSlot: 0, noPause: true, autoGas: true });
     KK.say(trackName(q.track), 110);
     let local = null;
     KK.H.onFinish = k => {
@@ -267,7 +272,7 @@
   function startDuel(d) {
     duelRound = d.round; racing = 'duel'; localDuelDone = false; view = 'race';
     showConsole();
-    const R = KK.startNet({ mode: 'duel', track: d.track, laps: d.laps, cc: 150, grid: d.chars.slice(), localSlot: d.slot, names: d.names.slice(), noPause: true, tags: true });
+    const R = KK.startNet({ mode: 'duel', track: d.track, laps: d.laps, cc: 150, grid: d.chars.slice(), localSlot: d.slot, names: d.names.slice(), noPause: true, tags: true, autoGas: true });
     R.net = { slot: d.slot, seq: 0, send: o => net.send(o) };
     const ms = d.startAt - net.serverNow();
     R.cd = Math.max(30, Math.min(420, Math.round(ms / (1000 / 60))));
@@ -286,6 +291,12 @@
     if (!d) return;
     // Nach der eigenen Zieldurchfahrt kurz „Ziel!“ stehen lassen
     if (R && R.player && R.player.finished && R.postT < 120) { setTimeout(finishDuelView, 300); return; }
+    if (R && R.player && !R.player.finished && !finishDuelView.shown) {
+      finishDuelView.shown = true;
+      if (d.winner >= 0 && d.winner !== d.slot) { KK.say(d.names[d.winner] + ' ist im Ziel!', 120, 'gold'); KK.SFX.final(); }
+      setTimeout(finishDuelView, 2000); return;
+    }
+    finishDuelView.shown = false;
     stopRace(); renderDuelResult(d);
   }
 

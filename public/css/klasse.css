@@ -170,13 +170,14 @@ body.teacher .chip{font-size:.75em}
 .spectate{gap:.8em}
 .split{display:grid;grid-template-columns:1fr 1fr;gap:1em;flex:1;min-height:0;align-content:center}
 .sv{display:flex;flex-direction:column;gap:.4em;min-width:0}
-.svbar{display:flex;align-items:baseline;gap:.8em;padding:0 .2em}
-.svname{font-family:var(--f-display);font-size:1.6em;color:var(--sun);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.svlap{font-family:var(--f-pixel);font-weight:700;color:var(--text)}
-.svpos{margin-left:auto;font-family:var(--f-display);font-size:1.6em}
-.svstage{position:relative;width:100%;aspect-ratio:3/2;max-height:calc(100dvh - 12em);border-radius:.6em;overflow:hidden;box-shadow:0 0 0 3px var(--deep),0 0 0 6px var(--line);background:#000}
+.svbar{display:flex;align-items:center;gap:.5em;padding:.2em .55em;background:var(--card);border:2px solid var(--line);border-radius:.6em;min-width:0}
+.svname{font-family:var(--f-display);font-size:2.8em;line-height:1.1;color:var(--sun);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.svlap{font-family:var(--f-body);font-weight:800;font-size:1.9em;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
+.svpos{margin-left:auto;font-family:var(--f-display);font-size:3em;line-height:1;color:var(--text)}
+.svstage{position:relative;width:100%;aspect-ratio:3/2;max-height:calc(100dvh - 15em);border-radius:.6em;overflow:hidden;box-shadow:0 0 0 3px var(--deep),0 0 0 6px var(--line);background:#000}
 .svstage canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated}
-.svfin{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-family:var(--f-display);font-size:2.2em;color:var(--sun);background:rgba(13,16,48,.82);padding:.3em .7em;border-radius:.4em;white-space:nowrap}
+.svfin.win{color:var(--ok)}
+.svfin{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-family:var(--f-display);font-size:3.2em;color:var(--sun);background:rgba(13,16,48,.82);padding:.3em .7em;border-radius:.4em;white-space:nowrap}
 .specfoot{display:flex;align-items:center;gap:1em}
 .specfoot .ghost-btn{margin-left:auto}
 
