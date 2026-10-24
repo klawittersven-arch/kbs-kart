@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d1030">
+<title>Mitspielen · KBS-Kart!</title>
+<link rel="icon" href="img/logo.png">
+<link rel="stylesheet" href="css/kart.css">
+<link rel="stylesheet" href="css/klasse.css">
+</head>
+<body class="student">
+<main class="app">
+  <header class="top">
+    <h1 class="brand">KBS-Kart! <span>Super Circuit</span></h1>
+    <div class="tools">
+      <span class="netdot" id="netdot" data-s="offline" title="Verbindung"></span>
+      <button class="chip" id="btnSound" aria-pressed="true">Ton: an</button>
+    </div>
+  </header>
+
+  <section class="panel" id="panel" aria-live="polite">
+    <div class="card"><h2>Verbinde …</h2><p>Einen Moment, die Klasse wird gesucht.</p></div>
+  </section>
+
+  <section class="console" id="console" hidden>
+    <div class="stage" id="stage">
+      <canvas id="game" width="480" height="320" aria-label="Spielbildschirm"></canvas>
+      <div class="hud" id="hud" hidden>
+        <div class="hud-tl"><div class="lbl">Runde</div><div class="lapv" id="hLap">1/3</div><div class="time" id="hTime">0'00"00</div></div>
+        <div class="hud-item"><canvas id="hItem" width="16" height="16"></canvas><span id="hItemN"></span></div>
+        <div class="hud-tr"><span class="pos" id="hPos">1</span><span class="posdot">.</span><span class="posof" id="hPosOf">/1</span></div>
+        <div class="hud-bl"><span class="coin-ico"></span><span id="hCoins">×00</span></div>
+      </div>
+      <div class="msg" id="msg" aria-live="polite"></div>
+      <div class="race-note" id="raceNote" hidden></div>
+    </div>
+    <div class="pad pad-l" id="padL" hidden>
+      <button class="pbtn" data-k="left" aria-label="Links lenken">◀</button>
+      <button class="pbtn" data-k="right" aria-label="Rechts lenken">▶</button>
+    </div>
+    <div class="pad pad-r" id="padR" hidden>
+      <button class="pbtn" data-k="item" aria-label="Item">L<small>Item</small></button>
+      <button class="pbtn" data-k="hop" aria-label="Hüpfen und Powerslide">R<small>Drift</small></button>
+      <button class="pbtn" data-k="brake" aria-label="Bremse">B<small>Bremse</small></button>
+      <button class="pbtn a" data-k="gas" aria-label="Gas">A<small>Gas</small></button>
+    </div>
+  </section>
+</main>
+<script>window.KK_MODE='student';</script>
+<script src="js/engine.js"></script>
+<script src="js/net.js"></script>
+<script src="js/mitspielen.js"></script>
+</body>
+</html>

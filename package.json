@@ -1,0 +1,11 @@
+{
+  "name": "kbs-kart",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KBS-Kart! Super Circuit – Kart-Rennspiel der Karoline-Breitinger-Schule mit Klassenmodus",
+  "type": "module",
+  "scripts": {
+    "start": "node server/local.mjs",
+    "deploy": "npx wrangler deploy"
+  }
+}
