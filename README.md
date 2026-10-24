@@ -51,7 +51,7 @@ Voraussetzung: ein kostenloses Cloudflare-Konto und dieses Repository bei GitHub
 
 **Tipps**
 - Im Finale die Handys **quer** halten, dann liegen die Tasten links und rechts vom Bild.
-- Im Klassenmodus gibt das Spiel **immer automatisch Gas**. Raketenstart: beim dritten roten Licht **R** tippen (am Laptop: Leertaste).
+- Im Klassenmodus gibt das Spiel **immer automatisch Gas**. Raketenstart: beim dritten roten Licht **Drift** tippen (am Laptop: Leertaste).
 - Auf den Handys läuft keine Musik, nur Soundeffekte. Musik und Geräusche des Finales kommen vom Beamer-Laptop.
 - SuS können auch am Laptop mitfahren. Steuerung: Pfeiltasten ← → lenken, ↓ bremsen, Leertaste hüpfen und driften, E für Items.
 - **Mehrere Klassen gleichzeitig:** Jede Lehrkraft öffnet einfach `/lehrer` und bekommt einen eigenen Code und QR-Code. Die Räume sind voneinander getrennt.

@@ -67,6 +67,8 @@ body.student .app{gap:14px}
 .result.win h2{color:var(--ok)}
 .pulse{width:14px;height:14px;border-radius:50%;background:var(--sun);animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}}
+body.student .pbtn.word{font-family:var(--f-body);font-weight:800;font-size:14px;letter-spacing:.01em;line-height:1}
+@media (orientation:landscape){body.student .pbtn.word{font-size:13px}}
 .race-note{position:absolute;left:50%;bottom:4cqw;transform:translateX(-50%);font-family:var(--f-pixel);font-weight:700;font-size:3cqw;color:#fff;background:rgba(13,16,48,.82);padding:1cqw 2cqw;border-radius:1.4cqw;white-space:nowrap}
 @media (orientation:portrait){body.student .console.touch .stage{width:min(100%,960px,max(288px,calc((100dvh - 290px)*1.5)))}}
 @media (orientation:landscape){

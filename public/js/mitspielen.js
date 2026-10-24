@@ -131,7 +131,7 @@
     setPanel(`<form class="card" id="nameForm" novalidate>
       <h2>Qualifying</h2>
       <p><strong>${esc(trackName(q.track))}</strong> · ${q.laps} ${q.laps === 1 ? 'Runde' : 'Runden'} · Zeitfahren mit 3× Turbo. Deine Gesamtzeit erscheint am Beamer.</p>
-      <p class="hint">Gas gibt das Spiel automatisch. Raketenstart: Tippe <b>R</b>, wenn das dritte rote Licht angeht.</p>
+      <p class="hint">Gas gibt das Spiel automatisch. Raketenstart: Tippe <b>Drift</b>, wenn das dritte rote Licht angeht.</p>
       <div class="row">
         <div class="field grow"><label for="inFirst">Vorname</label><input id="inFirst" autocomplete="given-name" maxlength="16" value="${esc(form.first)}" required></div>
         <div class="field initial"><label for="inInit">Nachname</label><input id="inInit" maxlength="1" autocapitalize="characters" autocomplete="off" value="${esc(form.initial)}" placeholder="K" required></div>
@@ -226,7 +226,7 @@
       <h2>Du fährst im Finale!</h2>
       <div class="versus"><div><canvas width="80" height="80" id="pv0"></canvas><b>${esc(d.names[d.slot])}</b><span>Du</span></div><em>gegen</em><div><canvas width="80" height="80" id="pv1"></canvas><b>${esc(opp)}</b><span>Gegner</span></div></div>
       <p><strong>${esc(trackName(d.track))}</strong> · ${d.laps} ${d.laps === 1 ? 'Runde' : 'Runden'} · mit Items. Das Rennen startet, sobald deine Lehrkraft am Beamer auf „Rennen starten“ drückt.</p>
-      <p class="hint">Tipp: Halte dein Handy quer, dann sind die Tasten links und rechts. Gas gibt das Spiel automatisch, Raketenstart mit <b>R</b> beim dritten roten Licht.</p>
+      <p class="hint">Tipp: Halte dein Handy quer, dann sind die Tasten links und rechts. Gas gibt das Spiel automatisch, Raketenstart mit <b>Drift</b> beim dritten roten Licht.</p>
       <button class="ghost-btn" id="btnSnd">Ton testen</button></div>`);
     portrait($('#pv0'), d.chars[d.slot]); portrait($('#pv1'), d.chars[1 - d.slot]);
     $('#btnSnd').onclick = () => { KK.AU.init(); KK.SFX.ok(); };
