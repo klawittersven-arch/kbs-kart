@@ -163,3 +163,5 @@ kbd{font-family:var(--f-pixel);font-size:12px;background:var(--panel);border:2px
 .console.touch ~ .tips.touch{display:block}
 @media (prefers-reduced-motion:reduce){.msg.show{animation:none;opacity:1}}
 a.chip{text-decoration:none;display:inline-flex;align-items:center}
+.pbtn.word{font-family:var(--f-body);font-weight:800;font-size:14px;letter-spacing:.01em;line-height:1}
+@media (orientation:landscape){.pbtn.word{font-size:13px}}

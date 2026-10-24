@@ -431,7 +431,7 @@ function playerInput(){
   const manualGas=down('gas')||touch.gas||gp.gas;
   const gas=manualGas||(autoGas&&!(touch.brake||down('brake')||gp.brake));
   const brake=down('brake')||touch.brake||gp.brake;
-  return{gas,manualGas,brake,steer,hop:down('hop')||touch.hop||gp.hop,item:down('item')||touch.item||gp.item,
+  return{gas,manualGas,autoGas,brake,steer,hop:down('hop')||touch.hop||gp.hop,item:down('item')||touch.item||gp.item,
     aimF:(upKey&&(upFresh<14||keys.has('KeyX')))||gp.up,aimB:brake||gp.down};
 }
 function pollPad(){
@@ -852,7 +852,7 @@ function tickRace(){
     R.cd--;
     if(R.cfg.mode!=='attract'){
       if(R.cd===150||R.cd===100||R.cd===50)SFX.beep();
-      if(R.player){const g=pin&&(pin.manualGas||(R.cfg.autoGas&&pin.hop));if(g&&!R.player.prevGas)R.player.gasAt=R.cd;if(!g)R.player.gasAt=-1;R.player.prevGas=g;}
+      if(R.player){const g=pin&&(pin.manualGas||(pin.autoGas&&pin.hop));if(g&&!R.player.prevGas)R.player.gasAt=R.cd;if(!g)R.player.gasAt=-1;R.player.prevGas=g;}
     }
     if(R.cd<=0){R.state='run';R.t=0;
       if(R.cfg.mode!=='attract')SFX.go();
