@@ -8,7 +8,7 @@ Das Kart-Rennspiel der Karoline-Breitinger-Schule. Es läuft im Browser, auf dem
 | Klassenmodus | `/lehrer` | Lehrkraft am Laptop mit Beamer |
 | Mitspielen | `/mitspielen` | SuS, wird über den QR-Code geöffnet |
 
-Figuren, Strecken, Grafik und Musik sind eigene Werke. Das Spiel enthält keine Inhalte aus Nintendo-Spielen.
+Spiel und Klassenmodus: © 2026 Sven Klawitter. Figuren, Strecken, Grafik und Musik sind eigene Werke. Das Spiel enthält keine Inhalte aus Nintendo-Spielen.
 
 ---
 

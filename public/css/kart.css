@@ -84,6 +84,7 @@ body{background:var(--ink);color:var(--text);font-family:var(--f-body);-webkit-t
 .m-list{display:flex;flex-direction:column;gap:1.3cqw}
 .m-row{display:flex;gap:1.2cqw;flex-wrap:wrap}
 .m-foot{margin-top:auto;color:var(--muted);font-size:1.9cqw;letter-spacing:.04em}
+.credit{position:absolute;left:4.4cqw;bottom:2.2cqw;margin:0;font-family:var(--f-body);font-size:1.7cqw;color:var(--muted);opacity:.7;letter-spacing:.02em;pointer-events:none}
 .cc-list{display:grid;grid-template-columns:repeat(3,1fr);gap:1.6cqw;margin-top:1cqw}
 .cc-list .btn{min-height:22cqw;justify-content:flex-start}
 .cc-list .big{font-family:var(--f-display);font-weight:400;font-size:5.4cqw;color:var(--sun)}
@@ -149,6 +150,7 @@ body{background:var(--ink);color:var(--text);font-family:var(--f-body);-webkit-t
   .tbtn b{font-size:3.4cqw}.tbtn small{font-size:2.4cqw}.tbtn em{font-size:2.4cqw}
   .res{font-size:3cqw}.res th{font-size:2.4cqw}.cc-list .btn small{font-size:2.6cqw}
   .m-foot{font-size:2.6cqw}
+  .credit{font-size:2.3cqw;left:3.6cqw;bottom:2cqw}
   .rankrow{font-size:2.7cqw}
 }
 /* Hilfe */

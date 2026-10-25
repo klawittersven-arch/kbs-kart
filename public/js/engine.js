@@ -1084,6 +1084,7 @@ function showTitle(keep){
   const ag=S.autoGas===true||(S.autoGas===null&&usingTouch);
   setMenu(`<div class="m-title">
     <div class="logo"><img class="school" src="${SCHOOL_LOGO}" alt="Logo der Karoline-Breitinger-Schule"><span class="l1">KBS-Kart!</span><span class="l2">Super Circuit</span></div>
+    <p class="credit">© 2026 Sven Klawitter</p>
     <div class="m-list">
       <button class="btn" data-act="gp">Grand Prix<small>4 Rennen · Punkte 9-6-3-1</small></button>
       <button class="btn" data-act="single">Einzelrennen<small>Eine Strecke gegen 7 Gegner</small></button>
