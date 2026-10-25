@@ -442,15 +442,15 @@
     }
     const rest = order.slice(1).map((s, i) => `${i + 2}. ${esc(d.names[s])}`).join(' · ');
     viewEl.innerHTML = `<div class="tpage tpodium">
-      <canvas id="winCv" class="wincv ${n > 2 ? 'steps' : ''}" width="${n > 2 ? 232 : 360}" height="${n > 2 ? 132 : 200}" role="img" aria-label="${esc(d.names[w])} auf dem Siegertreppchen mit Pokal"></canvas>
+      <div class="wincv podwrap ${n > 2 ? 'steps' : ''}"><canvas id="winCv" width="${n > 2 ? 232 : 360}" height="${n > 2 ? 132 : 200}" role="img" aria-label="${esc(d.names[w])} auf dem Siegertreppchen mit Pokal"></canvas></div>
       <div class="winner">
         <p class="eyebrow">Sieger des Finales · ${esc(T[d.track].name)}</p>
         <h2 class="wname">${esc(d.names[w])}</h2>
         <p class="wmeta">${d.fin[w] != null ? 'Zeit ' + KK.fmt(d.fin[w]) + ' · ' : ''}${rest}</p>
       </div>
       ${podiumActions()}</div>`;
-    if (n > 2) KK.podiumScene($('#winCv'), order.slice(0, 3).map(s => d.chars[s]));
-    else winnerScene($('#winCv'), d.chars[w]);
+    if (n > 2) KK.podiumScene($('#winCv'), order.slice(0, 3).map(s => d.chars[s]), order.slice(0, 3).map(s => d.names[s]));
+    else winnerScene($('#winCv'), d.chars[w], d.names[w]);
     bindPodium();
     KK.AU.init(); KK.SFX.finish(); KK.MUS.play(4);
   }
@@ -463,8 +463,11 @@
     $('#btnNewFinal').onclick = () => { KK.MUS.stop(); send(again()); };
     $('#btnBackQ2').onclick = () => { KK.MUS.stop(); send({ t: 'phase', phase: 'quali' }); };
   }
-  function winnerScene(cv, ci) {
+  function winnerScene(cv, ci, name) {
     const g = cv.getContext('2d'), W = cv.width, H = cv.height; g.imageSmoothingEnabled = false;
+    // Name über der Figur: über der höchsten Ansicht der sich drehenden Figur, Sprung eingerechnet
+    let tall = 0; for (let a = 0; a < KK.ANG; a++) { const b = KK.sprBounds(KK.KSPR[ci][a]); tall = Math.max(tall, b.y1 - b.y0); }
+    KK.podiumNames(cv, [{ name, place: 1, x: W / 2 - 20, y: 170 + 3 - tall * 2 - 16 }]);
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const rnd = (() => { let s = 11; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
     const conf = Array.from({ length: 70 }, () => ({ x: rnd() * W, y: rnd() * H, v: 16 + rnd() * 26, ph: rnd() * 6.28, c: ['#ffb238', '#ff4d6a', '#4fe0b5', '#5ec8ff', '#ffffff', '#ffd23f'][(rnd() * 6) | 0] }));
@@ -489,7 +492,7 @@
       g.drawImage(spr, Math.round(W / 2 - 20 - (b.x0 + b.x1) / 2 * scale), Math.round(base + 3 - b.y1 * scale + hop), 80 * scale, 80 * scale);
       for (const c of conf) { const y = ((c.y + c.v * t) % (H + 10)) - 10, x = Math.round(c.x + Math.sin(t * 2 + c.ph) * 4); g.fillStyle = c.c; if (Math.sin(t * 6 + c.ph) > 0) g.fillRect(x, Math.round(y), 3, 2); else g.fillRect(x, Math.round(y), 2, 3); }
     }
-    function loop(now) { if (!cv.isConnected) return; draw((now - t0) / 1000); requestAnimationFrame(loop); }
+    function loop(now) { if (!cv.isConnected) return; draw(Math.max(0, (now - t0) / 1000)); requestAnimationFrame(loop); }
     draw(0); if (!reduce) requestAnimationFrame(loop);
   }
 

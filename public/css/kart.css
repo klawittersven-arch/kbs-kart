@@ -58,6 +58,8 @@ body{background:var(--ink);color:var(--text);font-family:var(--f-body);-webkit-t
 .msg.show{animation:pop .5s ease-out both}
 .msg.warn{color:var(--cherry);font-size:5.4cqw}
 .msg.gold{color:var(--sun)}
+.msg.wrong.show{font-size:6.4cqw;animation:pop .5s ease-out both,wrongblink .9s steps(1) .5s infinite}
+@keyframes wrongblink{0%{color:var(--cherry)}55%{color:#fff}}
 @keyframes pop{0%{opacity:0;transform:scale(1.6)}60%{opacity:1;transform:scale(.95)}100%{opacity:1;transform:scale(1)}}
 .msg.fade{transition:opacity .4s;opacity:0!important;animation:none}
 
@@ -122,6 +124,11 @@ body{background:var(--ink);color:var(--text);font-family:var(--f-body);-webkit-t
 .endgrid{display:grid;grid-template-columns:auto 1fr;gap:3cqw;align-items:start;flex:1;min-height:0}
 .podcol{display:flex;flex-direction:column;gap:1.2cqw;min-width:0}
 .podium{display:block;width:44cqw;max-width:100%;height:auto;image-rendering:pixelated}
+.podwrap{position:relative;container-type:inline-size}
+.podwrap canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+.podname{position:absolute;z-index:1;transform:translate(-50%,-100%);font-family:var(--f-body);font-weight:700;font-size:max(10px,3.4cqw);line-height:1.15;color:#fff;background:rgba(13,16,48,.88);border:max(2px,.35cqw) solid #c7ccd6;border-radius:max(5px,.9cqw);padding:.12em .5em;white-space:nowrap;max-width:max(31cqw,6.5em);overflow:hidden;text-overflow:ellipsis;pointer-events:none;box-shadow:0 .25em .6em rgba(0,0,0,.4)}
+.podname.p1{font-size:max(11px,4cqw);color:#ffe58a;border-color:#ffc233;max-width:max(44cqw,8em)}
+.podname.p3{border-color:#cf7f45}
 .rankrow{display:flex;align-items:center;gap:1.8cqw;font-size:2.1cqw;line-height:1.5}
 .rankrow .rank{font-size:6.5cqw}
 
@@ -163,7 +170,7 @@ kbd{font-family:var(--f-pixel);font-size:12px;background:var(--panel);border:2px
 .console.touch ~ .legend,.console.touch ~ .tips.keys{display:none}
 .tips.touch{display:none}
 .console.touch ~ .tips.touch{display:block}
-@media (prefers-reduced-motion:reduce){.msg.show{animation:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.msg.show,.msg.wrong.show{animation:none;opacity:1}}
 a.chip{text-decoration:none;display:inline-flex;align-items:center}
 .pbtn.word{font-family:var(--f-body);font-weight:800;font-size:14px;letter-spacing:.01em;line-height:1}
 @media (orientation:landscape){.pbtn.word{font-size:13px}}

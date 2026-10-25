@@ -562,8 +562,9 @@ function kartUpdate(k,inp){
   // Partikel
   if(k.drift&&grounded&&R.t%3===0){for(const s of[-1,1])part(k.x-ca*5+(-sa)*s*4,k.y-sa*5+ca*s*4,.6,-ca*.2,-sa*.2,.25,16,k.mtFull?(R.t%6?'#7fd0ff':'#ffffff'):'#e8e8f0',k.mtFull?.8:1.2);}
   if(off&&k.speed>.8&&R.t%4===0)part(k.x-ca*5,k.y-sa*5,.6,(Math.random()-.5)*.4,(Math.random()-.5)*.4,.45,18,th.dust,1.1);
-  const p=T.pts[k.idx],fw=k.vx*p.dx+k.vy*p.dy;
-  if(fw<-.4)k.wrongT++;else k.wrongT=Math.max(0,k.wrongT-3);
+  // Falsche Richtung: rückwärts unterwegs oder mit dem Heck voran stehend
+  const p=T.pts[k.idx],fw=k.vx*p.dx+k.vy*p.dy,hd=ca*p.dx+sa*p.dy;
+  if(fw<-.3||(hd<-.6&&fw<.3))k.wrongT=Math.min(90,k.wrongT+1);else k.wrongT=Math.max(0,k.wrongT-4);
 }
 function startFall(k){const th=R.T.th;k.fall=k.fallMax=th.fallTime||100;k.drift=0;k.mt=0;k.mtF=0;k.mtFull=false;k.boost=0;k.trail=null;k.orbit=null;k.spin=0;k.spinA=0;const lose=Math.min(th.lava?3:2,k.coins);k.coins-=lose;k.fallIdx=k.idx;
   const fx=th.lava?['#ffd23f','#ff7a1a','#5a4a4e']:['#ffffff','#7fb2ff'];
@@ -880,7 +881,18 @@ function tickRace(){
     if(R.karts.every(k=>k.finished)||R.t>60*170)startAttract();
   }
   const pl=R.player;
-  if(pl&&!pl.finished&&R.state==='run'){if(pl.wrongT===90)say('Falsche Richtung!',80,'warn');}
+  wrongWay(!!(pl&&!pl.finished&&R.state==='run'&&pl.wrongT>=50));
+}
+// Hinweis bleibt (blinkend) stehen, solange in die falsche Richtung gefahren wird
+const WRONG_TXT='Falsche Richtung!';
+function wrongWay(on){
+  if(!msgEl)return;
+  const showing=msgEl.textContent===WRONG_TXT&&msgT>0;
+  if(on){
+    if(showing)msgT=Math.max(msgT,20);
+    else if(!R.wrongOn||msgT<=0)say(WRONG_TXT,40,'warn wrong');
+    R.wrongOn=true;
+  }else if(R.wrongOn){R.wrongOn=false;if(showing&&msgT>12)msgT=12;}
 }
 function playerFinished(k){
   R.state='post';R.postT=0;
@@ -1194,13 +1206,15 @@ function sprBounds(c){let b=SPR_BOUNDS.get(c);if(b)return b;const d=c.getContext
   for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++)if(d[(y*c.width+x)*4+3]>0){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
   b={x0,x1,y0,y1};SPR_BOUNDS.set(c,b);return b;}
 const DIG={1:['.#.','##.','.#.','.#.','###'],2:['###','..#','###','#..','###'],3:['###','..#','.##','..#','###']};
-function podiumScene(cv,top3){
+// names: Namen in Platz-Reihenfolge. Steckt die Leinwand in einem .podwrap, stehen sie gut lesbar über den Figuren
+function podiumScene(cv,top3,names){
   const g=cv.getContext('2d'),Wd=cv.width,Hd=cv.height,GR=128;g.imageSmoothingEnabled=false;
   const steps=[{p:2,x:6,w:58,top:96,c:['#eef1f7','#c7ccd6','#9aa1b2','#5b6274']},{p:1,x:64,w:104,top:82,c:['#ffe58a','#ffc233','#d99a1a','#7a4a10']},{p:3,x:168,w:58,top:106,c:['#f0b27a','#cf7f45','#a35a2a','#6b3418']}];
   const drv=[{ci:top3[1],st:steps[0],cx:35,ang:7},{ci:top3[0],st:steps[1],cx:92,ang:8,hop:true},{ci:top3[2],st:steps[2],cx:197,ang:9}];
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches,rnd=mulberry(7);
   const conf=Array.from({length:46},()=>({x:rnd()*Wd,y:rnd()*(Hd+10),v:14+rnd()*20,ph:rnd()*TAU,c:['#ffb238','#ff4d6a','#4fe0b5','#5ec8ff','#ffffff','#ffd23f'][(rnd()*6)|0]}));
   const tx=122,ty=steps[1].top+3-45;
+  podiumNames(cv,names?drv.filter(d=>d.ci!=null).map(d=>{const b=sprBounds(KSPR[d.ci][d.ang]);return{name:names[d.st.p-1],place:d.st.p,x:d.cx,y:d.st.top+3-(b.y1-b.y0)-(d.hop?9:4)};}):null);
   function draw(t){
     g.clearRect(0,0,Wd,Hd);
     const gr=g.createRadialGradient(110,34,4,110,60,125);gr.addColorStop(0,'rgba(255,214,130,.32)');gr.addColorStop(1,'rgba(255,214,130,0)');g.fillStyle=gr;g.fillRect(0,0,Wd,Hd);
@@ -1221,8 +1235,14 @@ function podiumScene(cv,top3){
     for(const c of conf){const y=((c.y+c.v*t)%(Hd+10))-10,x=Math.round(c.x+Math.sin(t*2+c.ph)*3);g.fillStyle=c.c;if(Math.sin(t*6+c.ph)>0)g.fillRect(x,Math.round(y),2,1);else g.fillRect(x,Math.round(y),1,2);}
   }
   const t0=performance.now();
-  function loop(now){if(!cv.isConnected)return;draw((now-t0)/1000);requestAnimationFrame(loop);}
+  function loop(now){if(!cv.isConnected)return;draw(Math.max(0,(now-t0)/1000));requestAnimationFrame(loop);}
   if(reduce)draw(0);else requestAnimationFrame(loop);
+}
+function podiumNames(cv,list){
+  const wrap=cv&&cv.parentElement;if(!wrap||!wrap.classList.contains('podwrap'))return;
+  wrap.querySelectorAll('.podname').forEach(e=>e.remove());
+  for(const it of list||[]){if(!it.name)continue;const el=document.createElement('span');el.className='podname p'+it.place;el.textContent=it.name;
+    el.style.left=(it.x/cv.width*100).toFixed(2)+'%';el.style.top=(it.y/cv.height*100).toFixed(2)+'%';wrap.appendChild(el);}
 }
 function showGPEnd(){
   screenName='gpend';MUS.play(4);msgEl.className='msg';msgT=0;
@@ -1230,11 +1250,11 @@ function showGPEnd(){
   const letter=p>=36?'A':p>=30?'B':p>=25?'C':p>=20?'D':'E';
   const cup=me===1?'Gold-Pokal':me===2?'Silber-Pokal':me===3?'Bronze-Pokal':'Kein Pokal';
   setMenu(`<div class="m-head"><h2>Endwertung</h2><span class="m-sub">${CC[S.cc].label}</span></div>
-    <div class="endgrid">${me===1?`<div class="podcol"><canvas class="podium" id="podium" width="232" height="132" role="img" aria-label="${CHARS[S.char].name} auf dem Siegertreppchen neben dem Gold-Pokal"></canvas><div class="rankrow"><span class="rank">${letter}</span><span>Rang ${letter} · ${cup}<br>${p} von 36 Punkten</span></div></div>`:`<div><div class="rank">${letter}</div><p>Rang ${letter}<br>${cup}<br>${p} von 36 Punkten</p></div>`}
+    <div class="endgrid">${me===1?`<div class="podcol"><div class="podium podwrap"><canvas id="podium" width="232" height="132" role="img" aria-label="${CHARS[S.char].name} auf dem Siegertreppchen neben dem Gold-Pokal"></canvas></div><div class="rankrow"><span class="rank">${letter}</span><span>Rang ${letter} · ${cup}<br>${p} von 36 Punkten</span></div></div>`:`<div><div class="rank">${letter}</div><p>Rang ${letter}<br>${cup}<br>${p} von 36 Punkten</p></div>`}
     <div class="res-wrap"><table class="res"><tr><th>Platz</th><th>Fahrer</th><th class="n">Punkte</th></tr>
     ${st.map((ci,i)=>`<tr${ci===S.char?' class="me"':''}><td class="pl">${i+1}.</td><td>${CHARS[ci].name}</td><td class="n">${GP.pts[ci]}</td></tr>`).join('')}</table></div></div>
     <div class="btnrow"><button class="btn go" data-act="cuprestart">Nochmal fahren</button><button class="btn" data-act="title">Hauptmenü</button></div>`,{back:showTitle,solid:true});
-  if(me===1){const c=$('#podium');if(c)podiumScene(c,st.slice(0,3));SFX.finish();}
+  if(me===1){const c=$('#podium');if(c)podiumScene(c,st.slice(0,3),st.slice(0,3).map(ci=>CHARS[ci].name));SFX.finish();}
 }
 function others(){return [0,1,2,3,4,5,6,7].filter(i=>i!==S.char).sort(()=>Math.random()-.5);}
 function startGP(){GP.active=true;GP.race=0;GP.flags=3;GP.pts=[0,0,0,0,0,0,0,0];GP.order=null;GP.grid=others().concat([S.char]);beginGPRace();}
@@ -1321,7 +1341,7 @@ function startNet(cfg){
   MUS.play(R.T.th.song);MUS.rate=1;return R;
 }
 window.__pixelpiste={get R(){return R;},keys,act,startRaceCfg,GEOM,trackFull,DBG,tickRace,GP,showGPEnd,prog:k=>prog(k),setScreen:v=>screenName=v};
-window.KK={H:HK,CHARS,TRACKS,TH,GEOM,KSPR,SPR,ANG,IC,CC,STAT_LABELS,TROPHY,sprBounds,podiumScene,drawMiniMap,mapXY,fmt,makeView,renderView,newRace,trackFull,startNet,netIn,
+window.KK={H:HK,CHARS,TRACKS,TH,GEOM,KSPR,SPR,ANG,IC,CC,STAT_LABELS,TROPHY,sprBounds,podiumScene,podiumNames,drawMiniMap,mapXY,fmt,makeView,renderView,newRace,trackFull,startNet,netIn,
   get R(){return R;},set R(v){R=v;},get screen(){return screenName;},setScreen(v){screenName=v;},
   AU,SFX,MUS,S,DBG,keys,touch,playerInput,enableTouch,say,tickRace,prog:k=>prog(k),hsl,mk,pix,outline,get usingTouch(){return usingTouch;}};
 })();

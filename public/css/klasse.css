@@ -257,4 +257,5 @@ body.teacher .chip{font-size:.75em}
 .ovrank.mini .nm{font-size:1.15em}
 .ovrank.mini .rk{font-size:1.4em}
 .ovmap{width:100%;height:auto;aspect-ratio:1;background:var(--deep);border-radius:.8em;border:2px solid var(--line)}
-.wincv.steps{aspect-ratio:58/33;width:min(100%,calc(58vh*1.76),1100px)}
+.wincv.steps{aspect-ratio:58/33;width:min(100%,calc(54vh*1.76),1100px)}
+.tpodium .podwrap{margin-top:1.6em}
