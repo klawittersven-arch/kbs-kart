@@ -174,7 +174,7 @@
     drawQR($('#qr'), joinUrl());
     $('#btnSettings').onclick = () => send({ t: 'phase', phase: 'setup' });
     $('#btnRestart').onclick = confirmRestart;
-    $('#btnFinal').onclick = openDuelSetup;
+    $('#btnFinal').onclick = () => openDuelSetup();
     updateQuali();
   }
   function sortedPlayers() {
@@ -214,54 +214,78 @@
     $('#kNo').onclick = () => { toastEl.hidden = true; };
   }
 
-  // ---------- 3. Finale einrichten
+  // ---------- 3. Finale einrichten (2 oder 4 Fahrer)
   let duelForm = null, dirtyAt = 0;
+  function rankedPool() {
+    const fin = room.players.filter(p => p.total != null).sort((a, b) => a.total - b.total);
+    return fin.concat(room.players.filter(p => p.total == null));
+  }
+  function defaultsFor(n, keep) {
+    const pool = rankedPool(); if (pool.length < n) return null;
+    const ps = pool.slice(0, n);
+    return { p: ps.map(x => x.pid), c: ps.map(x => x.char), track: keep ? keep.track : room.quali.track, laps: keep ? keep.laps : 3 };
+  }
+  function openDuelSetup(n, keep) {
+    n = n || U.store('kbs.teacher.duelN') || 2;
+    let f = defaultsFor(n, keep), m = n;
+    while (!f && m > 2) f = defaultsFor(--m, keep);
+    if (!f) return toast('Für ein Finale braucht es mindestens zwei angemeldete SuS.');
+    if (m < n) toast(`Für ein Finale mit ${n} Fahrern braucht es mindestens ${n} Angemeldete. Eingerichtet ist deshalb ein Finale mit ${m} Fahrern.`);
+    duelForm = f; dirtyAt = Date.now(); screen = '';
+    send({ t: 'duel-setup', ...duelForm });
+  }
   // Zeigt am Beamer genau das, was der Server gespeichert hat (außer direkt nach einer eigenen Änderung)
   function syncDuelForm(d) {
-    duelForm = { a: d.p[0], b: d.p[1], ca: d.chars[0], cb: d.chars[1], track: d.track, laps: d.laps };
+    duelForm = { p: d.p.slice(), c: d.chars.slice(), track: d.track, laps: d.laps };
     document.querySelectorAll('#slotTracks .trk').forEach((x, j) => x.setAttribute('aria-checked', String(j === d.track)));
     const st = document.querySelector('#slotLaps .stepper'); if (st && st.setValue) st.setValue(d.laps);
-    [0, 1].forEach(s => {
+    d.p.forEach((pid, s) => {
       document.querySelectorAll('#figs' + s + ' .fig').forEach((x, j) => x.setAttribute('aria-checked', String(j === d.chars[s])));
-      const sel = $('#selP' + s); if (sel && sel.value !== d.p[s]) sel.value = d.p[s];
+      const sel = $('#selP' + s); if (sel && sel.value !== pid) sel.value = pid;
     });
-  }
-  function openDuelSetup() {
-    const fin = room.players.filter(p => p.total != null).sort((a, b) => a.total - b.total);
-    const pool = fin.length >= 2 ? fin : fin.concat(room.players.filter(p => p.total == null));
-    if (pool.length < 2) return toast('Für ein Finale braucht es mindestens zwei angemeldete SuS.');
-    const a = pool[0], b = pool[1];
-    duelForm = { a: a.pid, b: b.pid, ca: a.char, cb: b.char, track: room.quali.track, laps: 3 };
-    send({ t: 'duel-setup', ...duelForm });
   }
   function renderDuelSetup() {
     screen = 'duel-setup';
-    const d = room.duel;
-    duelForm = { a: d.p[0], b: d.p[1], ca: d.chars[0], cb: d.chars[1], track: d.track, laps: d.laps };
+    const d = room.duel, n = d.p.length;
+    duelForm = { p: d.p.slice(), c: d.chars.slice(), track: d.track, laps: d.laps };
     const opts = sel => sortedPlayers().map(p => `<option value="${esc(p.pid)}" ${p.pid === sel ? 'selected' : ''}>${esc(p.name)}${p.total != null ? ' · ' + KK.fmt(p.total) : ''}</option>`).join('');
     viewEl.innerHTML = `<div class="tpage duelsetup">
-      <div class="thead"><h2>Finale einrichten</h2><p>Die zwei Schnellsten sind vorausgewählt. Alle anderen Handys wurden getrennt.</p></div>
-      <div class="duo">
-        ${[0, 1].map(s => `<div class="slot" data-s="${s}">
-          <h3>Fahrer ${s + 1}</h3>
-          <select id="selP${s}" aria-label="Fahrer ${s + 1}">${opts(d.p[s])}</select>
-          <p class="online" id="on${s}"></p>
-          <div id="figs${s}"></div></div>`).join('<div class="vs" aria-hidden="true">VS</div>')}
+      <div class="thead row">
+        <div><h2>Finale einrichten</h2><p>Die Schnellsten aus dem Qualifying sind vorausgewählt. Wer schneller war, startet weiter vorn. Mit der Auswahlliste tauschst du Fahrer aus.</p></div>
+        <div class="seg" role="radiogroup" aria-label="Anzahl Fahrer">
+          <button role="radio" aria-checked="${n === 2}" data-n="2">2 Fahrer</button>
+          <button role="radio" aria-checked="${n === 3}" data-n="3">3 Fahrer</button>
+          <button role="radio" aria-checked="${n === 4}" data-n="4">4 Fahrer</button>
+        </div>
       </div>
-      <div class="tsec"><h3>Strecke</h3><div id="slotTracks"></div></div>
-      <div class="tsec"><h3>Rundenzahl</h3><div id="slotLaps"></div></div>
+      <div class="duo n${n}">
+        ${d.p.map((pid, s) => `<div class="slot" data-s="${s}">
+          <div class="slothead"><h3>Startplatz ${s + 1}</h3><p class="online" id="on${s}"></p></div>
+          <select id="selP${s}" aria-label="Fahrer auf Startplatz ${s + 1}">${opts(pid)}</select>
+          <div id="figs${s}"></div></div>`).join(n === 2 ? '<div class="vs" aria-hidden="true">VS</div>' : '')}
+      </div>
+      <div class="tgrid2b">
+        <div class="tsec"><h3>Strecke</h3><div id="slotTracks"></div></div>
+        <div class="tsec"><h3>Rundenzahl</h3><div id="slotLaps"></div></div>
+      </div>
       <div class="tactions">
         <button class="ghost-btn" id="btnBackQ">Zurück zum Qualifying</button>
         <span class="hint" id="startHint"></span>
         <button class="big-btn" id="btnStart">Rennen starten</button>
       </div></div>`;
     const apply = () => { dirtyAt = Date.now(); send({ t: 'duel-setup', ...duelForm }); };
-    [0, 1].forEach(s => {
-      $('#figs' + s).appendChild(charPicker(s ? duelForm.cb : duelForm.ca, false, i => { if (s) duelForm.cb = i; else duelForm.ca = i; apply(); }));
+    viewEl.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
+      const nn = +b.dataset.n; if (nn === duelForm.p.length) return;
+      U.store('kbs.teacher.duelN', nn); openDuelSetup(nn, duelForm);
+    });
+    d.p.forEach((pid, s) => {
+      $('#figs' + s).appendChild(charPicker(duelForm.c[s], false, i => { duelForm.c[s] = i; apply(); }));
       $('#selP' + s).onchange = e => {
-        const pid = e.target.value, p = room.players.find(x => x.pid === pid);
-        if (s) { duelForm.b = pid; if (p) duelForm.cb = p.char; } else { duelForm.a = pid; if (p) duelForm.ca = p.char; }
-        if (duelForm.a === duelForm.b) return toast('Bitte zwei verschiedene Fahrer wählen.');
+        const np = e.target.value, other = duelForm.p.indexOf(np), old = duelForm.p[s];
+        const pl = room.players.find(x => x.pid === np);
+        if (other >= 0 && other !== s) { duelForm.p[other] = old; const oc = duelForm.c[other]; duelForm.c[other] = duelForm.c[s]; duelForm.c[s] = oc; }
+        else if (pl) duelForm.c[s] = pl.char;
+        duelForm.p[s] = np;
         screen = ''; apply();
       };
     });
@@ -274,50 +298,136 @@
   function updateDuelSetup() {
     const d = room.duel; if (!d) return;
     if (Date.now() - dirtyAt > 1500) syncDuelForm(d);
-    [0, 1].forEach(s => {
+    const missing = [];
+    d.p.forEach((pid, s) => {
       const el = $('#on' + s); if (!el) return;
       el.className = 'online ' + (d.online[s] ? 'yes' : 'no');
-      el.textContent = d.online[s] ? 'Handy verbunden' : 'Handy nicht verbunden: Seite neu öffnen oder QR-Code scannen';
+      el.textContent = d.online[s] ? 'Handy verbunden' : 'Handy nicht verbunden: Seite öffnen oder QR-Code scannen';
+      if (!d.online[s]) missing.push(d.names[s]);
     });
-    const ok = d.online[0] && d.online[1];
+    const ok = !missing.length;
     const b = $('#btnStart'); if (b) b.disabled = !ok;
-    const h = $('#startHint'); if (h) h.textContent = ok ? 'Beide bereit.' : 'Warte, bis beide Handys verbunden sind.';
+    const h = $('#startHint'); if (h) h.textContent = ok ? 'Alle bereit.' : 'Warte auf: ' + missing.join(', ');
   }
 
-  // ---------- 4. Live-Duell am Beamer (Splitscreen)
+  // ---------- 4. Live-Finale am Beamer
+  // Ansichten: „Alle Bildschirme“ (1×2 bzw. 2×2) oder „Übersicht“ (Führender groß, Platzierung, Karte)
+  let viewMode = U.store('kbs.teacher.view') === 'overview' ? 'overview' : 'split';
+  // Auflösung wird bei jedem Aufbau der Ansicht neu gemessen (meist noch während des Countdowns)
+  let lowRes = false;
   function startSpectate() {
     stopSpectate();
     screen = 'duel';
-    const d = room.duel;
-    viewEl.innerHTML = `<div class="tpage spectate">
-      <div class="split">
-        ${[0, 1].map(s => `<div class="sv">
-          <div class="svbar"><span class="svname">${esc(d.names[s])}</span><span class="svlap" id="lap${s}"></span><span class="svpos" id="pos${s}"></span></div>
-          <div class="svstage"><canvas id="cv${s}" width="480" height="320"></canvas><div class="svfin" id="fin${s}" hidden></div></div></div>`).join('')}
-      </div>
-      <div class="specfoot"><span class="eyebrow">Finale · ${esc(T[d.track].name)} · ${lapsTxt(d.laps)}</span><button class="ghost-btn" id="btnEnd">Rennen beenden</button></div></div>`;
+    const d = room.duel, n = d.p.length;
     const R = KK.startNet({ mode: 'duel', track: d.track, laps: d.laps, cc: 150, grid: d.chars.slice(), localSlot: -1, names: d.names.slice(), noPause: true, tags: true, alwaysTick: true });
     const ms = d.startAt - net.serverNow();
     R.cd = Math.max(30, Math.min(420, Math.round(ms / (1000 / 60))));
-    const views = [0, 1].map(s => { const v = KK.makeView($('#cv' + s)); v.cam.tgt = R.karts[s]; v.cam.a = R.karts[s].a; return v; });
-    spect = { round: d.round, views };
-    KK.H.render = () => { if (KK.R) { KK.renderView(views[0]); KK.renderView(views[1]); } };
-    let n = 0;
-    KK.H.tick = () => { if (++n % 8) return; const R2 = KK.R; if (!R2) return; lastLeader = R2.karts[0].place <= R2.karts[1].place ? 0 : 1; [0, 1].forEach(s => { const k = R2.karts[s]; $('#lap' + s).textContent = 'Runde ' + Math.max(1, Math.min(R2.laps, k.lap)) + '/' + R2.laps; $('#pos' + s).textContent = k.place + '.'; }); };
-    $('#btnEnd').onclick = () => endDuel();
-    updateSpectate();
+    spect = { round: d.round, n, views: [], ema: 0, samples: 0, camLead: 0, leadT: 0 };
+    buildSpectate();
+    KK.H.render = renderSpectate;
+    let tk = 0;
+    KK.H.tick = () => {
+      const R2 = KK.R; if (!R2 || !spect) return;
+      // Kamera der Übersicht wechselt erst, wenn jemand eine Sekunde lang vorn liegt
+      const lead = leader();
+      if (lead !== spect.camLead) { if (++spect.leadT > 60) { spect.camLead = lead; spect.leadT = 0; } } else spect.leadT = 0;
+      if (++tk % 8) return;
+      updateSpectateHud();
+    };
   }
-  let lastLeader = 0;
-  function leader() { const R = KK.R; if (!R) return lastLeader; return R.karts[0].place <= R.karts[1].place ? 0 : 1; }
-  function endDuel() { send({ t: 'duel-end', winner: leader() }); }
+  function buildSpectate() {
+    const d = room.duel, n = d.p.length, R = KK.R;
+    lowRes = false; spect.samples = 0; spect.ema = 0;
+    const foot = `<div class="specfoot"><span class="eyebrow">Finale · ${esc(T[d.track].name)} · ${lapsTxt(d.laps)} · ${n} Fahrer</span>
+      <button class="ghost-btn" id="btnMode">${viewMode === 'split' ? 'Übersicht zeigen' : 'Alle Bildschirme zeigen'}</button>
+      <button class="ghost-btn" id="btnEnd">Rennen beenden</button></div>`;
+    if (viewMode === 'split') {
+      viewEl.innerHTML = `<div class="tpage spectate"><div class="split n${n}">
+        ${d.names.map((nm, s) => `<div class="sv">
+          <div class="svbar"><span class="svname">${esc(nm)}</span><span class="svlap" id="lap${s}"></span><span class="svpos" id="pos${s}"></span></div>
+          <div class="svstage"><canvas id="cv${s}" width="480" height="320"></canvas><div class="svwarn" id="warn${s}" hidden>Verbindung weg</div><div class="svfin" id="fin${s}" hidden></div></div></div>`).join('')}
+        ${n === 3 ? `<div class="sv mapcell"><div class="svstage mapstage"><canvas id="ovMap" class="ovmap" width="320" height="320" role="img" aria-label="Streckenkarte mit allen Fahrern"></canvas><ol class="ovrank mini" id="ovRank"></ol></div></div>` : ''}
+      </div>${foot}</div>`;
+      spect.views = d.names.map((_, s) => { const v = KK.makeView($('#cv' + s), lowRes ? 1 : 2); v.cam.tgt = R.karts[s]; v.cam.a = R.karts[s].a; return v; });
+      if (n === 3) spect.mapBg = KK.drawMiniMap(KK.GEOM[d.track], 320, 9, '#eef0ff');
+    } else {
+      viewEl.innerHTML = `<div class="tpage spectate"><div class="overview">
+        <div class="ovmain"><div class="svbar"><span class="svname" id="ovName"></span><span class="svlap" id="ovLap"></span><span class="svpos">Führung</span></div>
+          <div class="svstage"><canvas id="cvO" width="480" height="320"></canvas><div class="svfin" id="finO" hidden></div></div></div>
+        <div class="ovside"><ol class="ovrank" id="ovRank"></ol><canvas id="ovMap" class="ovmap" width="320" height="320" role="img" aria-label="Streckenkarte mit allen Fahrern"></canvas></div>
+      </div>${foot}</div>`;
+      const lead = R.karts[spect.camLead] || R.karts[0];
+      const v = KK.makeView($('#cvO'), lowRes ? 1 : 2); v.cam.tgt = lead; v.cam.a = lead.a;
+      spect.views = [v];
+      spect.mapBg = KK.drawMiniMap(KK.GEOM[d.track], 320, 9, '#eef0ff');
+    }
+    $('#btnMode').onclick = () => { viewMode = viewMode === 'split' ? 'overview' : 'split'; U.store('kbs.teacher.view', viewMode); buildSpectate(); updateSpectateHud(); };
+    $('#btnEnd').onclick = () => endDuel();
+    updateSpectateHud();
+  }
+  function renderSpectate() {
+    const R = KK.R; if (!R || !spect) return;
+    const t0 = performance.now();
+    if (viewMode === 'overview') {
+      const v = spect.views[0], lead = R.karts[spect.camLead] || R.karts[0];
+      if (v.cam.tgt !== lead) { v.cam.tgt = lead; v.cam.a = lead.a; }
+      KK.renderView(v);
+    } else for (const v of spect.views) KK.renderView(v);
+    // Zu langsamer Laptop? Dann die Strecke mit halber Auflösung zeichnen
+    if (!lowRes) {
+      const dt = performance.now() - t0;
+      if (++spect.samples > 20) spect.ema = spect.ema ? spect.ema * 0.92 + dt * 0.08 : dt;
+      if (spect.samples > 90 && spect.ema > 11) {
+        lowRes = true;
+        spect.views.forEach(v => { const nv = KK.makeView(v.canvas, 1); nv.cam = v.cam; nv.V = v.V; Object.assign(v, nv); });
+      }
+    }
+  }
+  function updateSpectateHud() {
+    const R = KK.R; if (!R || !spect) return;
+    const lapOf = k => 'Runde ' + Math.max(1, Math.min(R.laps, k.lap)) + '/' + R.laps;
+    if (viewMode === 'split') {
+      R.karts.forEach((k, s) => {
+        const lap = $('#lap' + s), pos = $('#pos' + s); if (!lap) return;
+        lap.textContent = lapOf(k);
+        const w = $('#warn' + s); if (w) w.hidden = !k.stale;
+        pos.textContent = k.place + '.';
+      });
+    } else {
+      const lead = R.karts[spect.camLead] || R.karts[0];
+      const nm = $('#ovName'); if (nm) { nm.textContent = lead.name; $('#ovLap').textContent = lapOf(lead); }
+    }
+    {
+      const ol = $('#ovRank');
+      if (ol) ol.innerHTML = R.karts.slice().sort((a, b) => a.place - b.place).map(k => `<li${k.stale ? ' class="stale"' : ''}><span class="rk">${k.place}.</span><canvas width="80" height="80" data-c="${k.ci}"></canvas><span class="nm">${esc(k.name)}</span><span class="lp">${k.stale ? 'Verbindung weg' : lapOf(k)}</span></li>`).join('');
+      if (ol) ol.querySelectorAll('canvas[data-c]').forEach(c => { const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(KK.KSPR[+c.dataset.c][6], 0, 0); });
+      const map = $('#ovMap');
+      if (map && spect.mapBg) {
+        const g = map.getContext('2d'); g.clearRect(0, 0, 320, 320); g.drawImage(spect.mapBg, 0, 0);
+        R.karts.slice().sort((a, b) => b.place - a.place).forEach(k => {
+          const [x, y] = KK.mapXY(R.T, 320, k.x, k.y);
+          g.fillStyle = '#141022'; g.beginPath(); g.arc(x, y, 11, 0, 6.283); g.fill();
+          g.fillStyle = k.c.kart; g.beginPath(); g.arc(x, y, 9, 0, 6.283); g.fill();
+          g.fillStyle = '#ffffff'; g.font = '700 12px Rubik, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(k.place), x, y + 1);
+        });
+      }
+    }
+  }
+  function leader() { const R = KK.R; if (!R) return 0; let b = 0; R.karts.forEach((k, i) => { if (k.place < R.karts[b].place) b = i; }); return b; }
+  function raceOrder() {
+    const R = KK.R; if (!R) return null;
+    return R.karts.map((_, i) => i).sort((a, b) => R.karts[a].place - R.karts[b].place);
+  }
+  function endDuel() { send({ t: 'duel-end', order: raceOrder() }); }
   function updateSpectate() {}
   function showFinish() {
-    const d = room.duel;
-    [0, 1].forEach(s => {
-      const el = $('#fin' + s); if (!el) return;
-      el.hidden = false; el.classList.toggle('win', s === d.winner);
-      el.textContent = s === d.winner ? 'Ziel! ' + (d.fin[s] != null ? KK.fmt(d.fin[s]) : '') : (d.winner >= 0 ? '2. Platz' : 'Ende');
-    });
+    const d = room.duel, order = d.order || [d.winner];
+    const label = s => s === d.winner ? 'Ziel! ' + (d.fin[s] != null ? KK.fmt(d.fin[s]) : '') : (order.indexOf(s) >= 0 ? (order.indexOf(s) + 1) + '. Platz' : 'Ende');
+    if (viewMode === 'split') {
+      d.names.forEach((_, s) => { const el = $('#fin' + s); if (!el) return; el.hidden = false; el.classList.toggle('win', s === d.winner); el.textContent = label(s); });
+    } else {
+      const el = $('#finO'); if (el && d.winner >= 0) { el.hidden = false; el.classList.add('win'); el.textContent = d.names[d.winner] + ' gewinnt!'; }
+    }
     KK.SFX.final();
   }
 
@@ -325,20 +435,22 @@
   function renderPodium() {
     screen = 'podium';
     const d = room.duel; podiumRound = d.round;
-    const w = d.winner, l = 1 - w;
+    const n = d.p.length, w = d.winner, order = d.order || [w].concat(d.p.map((_, i) => i).filter(i => i !== w));
     if (w < 0) {
       viewEl.innerHTML = `<div class="tpage tpodium"><div class="thead"><h2>Rennen beendet</h2><p>Es wurde kein Sieger ermittelt.</p></div>${podiumActions()}</div>`;
       bindPodium(); return;
     }
+    const rest = order.slice(1).map((s, i) => `${i + 2}. ${esc(d.names[s])}`).join(' · ');
     viewEl.innerHTML = `<div class="tpage tpodium">
-      <canvas id="winCv" class="wincv" width="360" height="200" role="img" aria-label="${esc(d.names[w])} mit Pokal"></canvas>
+      <canvas id="winCv" class="wincv ${n > 2 ? 'steps' : ''}" width="${n > 2 ? 232 : 360}" height="${n > 2 ? 132 : 200}" role="img" aria-label="${esc(d.names[w])} auf dem Siegertreppchen mit Pokal"></canvas>
       <div class="winner">
         <p class="eyebrow">Sieger des Finales · ${esc(T[d.track].name)}</p>
         <h2 class="wname">${esc(d.names[w])}</h2>
-        <p class="wmeta">${d.fin[w] != null ? 'Zeit ' + KK.fmt(d.fin[w]) : ''}${d.fin[l] != null ? ' · vor ' + esc(d.names[l]) + ' (' + KK.fmt(d.fin[l]) + ')' : ' · vor ' + esc(d.names[l])}</p>
+        <p class="wmeta">${d.fin[w] != null ? 'Zeit ' + KK.fmt(d.fin[w]) + ' · ' : ''}${rest}</p>
       </div>
       ${podiumActions()}</div>`;
-    winnerScene($('#winCv'), d.chars[w]);
+    if (n > 2) KK.podiumScene($('#winCv'), order.slice(0, 3).map(s => d.chars[s]));
+    else winnerScene($('#winCv'), d.chars[w]);
     bindPodium();
     KK.AU.init(); KK.SFX.finish(); KK.MUS.play(4);
   }
@@ -346,9 +458,9 @@
     return `<div class="tactions center"><button class="big-btn" id="btnRematch">Revanche</button><button class="ghost-btn" id="btnNewFinal">Anderes Finale</button><button class="ghost-btn" id="btnBackQ2">Zurück zum Qualifying</button></div>`;
   }
   function bindPodium() {
-    const d = room.duel;
-    $('#btnRematch').onclick = () => send({ t: 'duel-setup', a: d.p[0], b: d.p[1], ca: d.chars[0], cb: d.chars[1], track: d.track, laps: d.laps });
-    $('#btnNewFinal').onclick = () => { KK.MUS.stop(); send({ t: 'duel-setup', a: d.p[0], b: d.p[1], ca: d.chars[0], cb: d.chars[1], track: d.track, laps: d.laps }); };
+    const d = room.duel, again = () => ({ t: 'duel-setup', p: d.p.slice(), c: d.chars.slice(), track: d.track, laps: d.laps });
+    $('#btnRematch').onclick = () => send(again());
+    $('#btnNewFinal').onclick = () => { KK.MUS.stop(); send(again()); };
     $('#btnBackQ2').onclick = () => { KK.MUS.stop(); send({ t: 'phase', phase: 'quali' }); };
   }
   function winnerScene(cv, ci) {

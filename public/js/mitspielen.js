@@ -82,17 +82,17 @@
     renderInterrupted();
   }
 
+  // Nicht im Finale: Die Seite bleibt still verbunden (kostet fast nichts), damit die
+  // Lehrkraft Fahrer tauschen oder ein größeres Finale einrichten kann. Fürs Rennen selbst
+  // ist diese Verbindung nicht nötig; wer die Seite schließt, stört niemanden.
   function release() {
     if (released) return;
     released = true; view = 'released';
     const me = you && you.me;
     setPanel(`<div class="card">
       <h2>Das Finale läuft am Beamer</h2>
-      <p>${me && me.total ? `Deine Qualifying-Zeit: <strong>${KK.fmt(me.total)}</strong>${me.rank ? ` · Platz ${me.rank} von ${me.of}` : ''}. ` : ''}Danke fürs Mitfahren! Deine Verbindung ist jetzt getrennt, du kannst die Seite schließen.</p>
-      <p>Falls deine Lehrkraft dich für ein Finale aufruft, tippe auf „Wieder verbinden“.</p>
-      <button class="ghost-btn" id="btnRe">Wieder verbinden</button></div>`);
-    $('#btnRe').onclick = () => { released = false; net.open(); };
-    net.close();
+      <p>${me && me.total ? `Deine Qualifying-Zeit: <strong>${KK.fmt(me.total)}</strong>${me.rank ? ` · Platz ${me.rank} von ${me.of}` : ''}. ` : ''}Danke fürs Mitfahren! Du kannst die Seite jetzt schließen.</p>
+      <p>Wenn du sie offen lässt, meldet sie sich von selbst, sobald deine Lehrkraft dich ins Finale holt.</p></div>`);
   }
 
   // ---------------------------------------------------------------- Ansichten
@@ -221,24 +221,30 @@
 
   function renderDuelInvite(d) {
     view = 'invite';
-    const opp = d.names[1 - d.slot];
+    const others = d.names.map((nm, i) => i).filter(i => i !== d.slot);
+    const vs = d.names.length === 2
+      ? `<div class="versus"><div><canvas width="80" height="80" data-c="${d.chars[d.slot]}"></canvas><b>${esc(d.names[d.slot])}</b><span>Du</span></div><em>gegen</em><div><canvas width="80" height="80" data-c="${d.chars[others[0]]}"></canvas><b>${esc(d.names[others[0]])}</b><span>Gegner</span></div></div>`
+      : `<div class="field4" style="grid-template-columns:repeat(${d.names.length},minmax(0,1fr))">${d.names.map((nm, i) => `<div class="${i === d.slot ? 'me' : ''}"><canvas width="80" height="80" data-c="${d.chars[i]}"></canvas><b>${esc(nm)}</b><span>${i === d.slot ? 'Du · ' : ''}Startplatz ${i + 1}</span></div>`).join('')}</div>`;
     setPanel(`<div class="card invite">
       <h2>Du fährst im Finale!</h2>
-      <div class="versus"><div><canvas width="80" height="80" id="pv0"></canvas><b>${esc(d.names[d.slot])}</b><span>Du</span></div><em>gegen</em><div><canvas width="80" height="80" id="pv1"></canvas><b>${esc(opp)}</b><span>Gegner</span></div></div>
-      <p><strong>${esc(trackName(d.track))}</strong> · ${d.laps} ${d.laps === 1 ? 'Runde' : 'Runden'} · mit Items. Das Rennen startet, sobald deine Lehrkraft am Beamer auf „Rennen starten“ drückt.</p>
+      ${vs}
+      <p><strong>${esc(trackName(d.track))}</strong> · ${d.laps} ${d.laps === 1 ? 'Runde' : 'Runden'} · ${d.names.length} Fahrer · mit Items. Du startest von <strong>Startplatz ${d.slot + 1}</strong>. Das Rennen beginnt, sobald deine Lehrkraft am Beamer auf „Rennen starten“ drückt.</p>
       <p class="hint">Tipp: Halte dein Handy quer, dann sind die Tasten links und rechts. Gas gibt das Spiel automatisch, Raketenstart mit <b>Drift</b> beim dritten roten Licht.</p>
       <button class="ghost-btn" id="btnSnd">Ton testen</button></div>`);
-    portrait($('#pv0'), d.chars[d.slot]); portrait($('#pv1'), d.chars[1 - d.slot]);
+    panel.querySelectorAll('canvas[data-c]').forEach(c => portrait(c, +c.dataset.c));
     $('#btnSnd').onclick = () => { KK.AU.init(); KK.SFX.ok(); };
   }
 
+  function placeOf(d) { return d.order ? d.order.indexOf(d.slot) + 1 : (d.winner === d.slot ? 1 : 0); }
   function renderDuelResult(d) {
     view = 'duelres';
-    const win = d.winner === d.slot, t = d.fin[d.slot], ot = d.fin[1 - d.slot];
+    const n = d.names.length, place = placeOf(d), win = place === 1;
+    const title = d.winner < 0 ? 'Rennen beendet' : win ? 'Gewonnen!' : n === 2 ? 'Knapp verloren' : place + '. Platz';
+    const wt = d.winner >= 0 ? d.fin[d.winner] : null;
     setPanel(`<div class="card result ${win ? 'win' : ''}">
-      <h2>${d.winner < 0 ? 'Rennen beendet' : win ? 'Gewonnen!' : 'Knapp verloren'}</h2>
+      <h2>${title}</h2>
       <canvas width="80" height="80" id="pvr" class="big-port"></canvas>
-      <p>${t ? `Deine Zeit: <strong>${KK.fmt(t)}</strong>` : 'Du warst noch nicht im Ziel.'}${ot ? ` · ${esc(d.names[1 - d.slot])}: <strong>${KK.fmt(ot)}</strong>` : ''}</p>
+      <p>${win ? `Deine Zeit: <strong>${wt ? KK.fmt(wt) : '–'}</strong>` : d.winner >= 0 ? `${esc(d.names[d.winner])} war zuerst im Ziel${wt ? ` (<strong>${KK.fmt(wt)}</strong>)` : ''}.${n > 2 && place ? ` Du bist <strong>${place}.</strong> von ${n}.` : ''}` : ''}</p>
       <p>Die Siegerehrung siehst du am Beamer.</p></div>`);
     portrait($('#pvr'), d.chars[d.slot]);
   }
@@ -279,11 +285,19 @@
     KK.say('Finale · ' + trackName(d.track), 110);
     KK.H.onFinish = k => {
       localDuelDone = true;
-      net.send({ t: 'fin', time: k.ftime }, true);
+      // Reihenfolge aus Sicht dieses Handys: wer im Ziel ist zuerst, dann nach Streckenfortschritt
+      const Rr = KK.R, order = Rr.karts.map((_, i) => i).sort((a, b) => {
+        const A = Rr.karts[a], B = Rr.karts[b];
+        if (A === k) return -1; if (B === k) return 1;
+        if (A.finished && B.finished) return A.ftime - B.ftime;
+        if (A.finished) return -1; if (B.finished) return 1;
+        return KK.prog(B) - KK.prog(A);
+      });
+      net.send({ t: 'fin', time: k.ftime, order }, true);
     };
     KK.H.onPost = () => {
       if (you && you.duel && you.duel.state === 'done') finishDuelView();
-      else { raceNote.textContent = 'Warte auf ' + d.names[1 - d.slot] + ' …'; raceNote.hidden = false; }
+      else { raceNote.textContent = 'Warte auf die Siegerehrung …'; raceNote.hidden = false; }
     };
   }
   function finishDuelView() {

@@ -21,6 +21,15 @@ const int = (v, lo, hi, def) => {
   return Number.isInteger(v) && v >= lo && v <= hi ? v : def;
 };
 
+// Rangfolge im Finale prüfen; wer zuerst im Ziel war (first), steht immer vorn
+export function cleanOrder(order, n, first) {
+  let o = Array.isArray(order) ? order.map(Number) : [];
+  const ok = o.length === n && new Set(o).size === n && o.every(x => Number.isInteger(x) && x >= 0 && x < n);
+  if (!ok) o = Array.from({ length: n }, (_, i) => i);
+  if (first >= 0) o = [first].concat(o.filter(x => x !== first));
+  return o;
+}
+
 export function freshState(code) {
   return {
     v: 1, code, teacherKey: null, created: 0, updated: 0,
@@ -132,20 +141,20 @@ export class RoomLogic {
       case 'duel-start': {
         if (s.phase !== 'duel-setup') return;
         // Die Lehrkraft schickt ihre aktuelle Auswahl mit: genau diese wird gefahren
-        if (msg.a && msg.b && !this.applyDuel(s, msg)) return conn.send({ t: 'error', why: 'duel-players' });
+        if (Array.isArray(msg.p) && !this.applyDuel(s, msg)) return conn.send({ t: 'error', why: 'duel-players' });
         const d = s.duel; if (!d) return;
         const on = this.online();
-        if (!on.has(d.p[0]) || !on.has(d.p[1])) return conn.send({ t: 'error', why: 'duel-offline' });
-        d.state = 'running'; d.startAt = this.io.now() + 5500; d.fin = [null, null]; d.winner = -1;
+        if (!d.p.every(pid => on.has(pid))) return conn.send({ t: 'error', why: 'duel-offline' });
+        d.state = 'running'; d.startAt = this.io.now() + 5500; d.fin = d.p.map(() => null); d.winner = -1; d.order = null;
         s.phase = 'duel';
         await this.persist(); this.pushAll(); return;
       }
       case 'duel-end': {
         const d = s.duel; if (!d || s.phase !== 'duel') return;
-        let w = int(msg.winner, -1, 1, -1);
-        if (d.fin[0] != null && d.fin[1] != null) w = d.fin[0] <= d.fin[1] ? 0 : 1;
-        else if (d.fin[0] != null) w = 0; else if (d.fin[1] != null) w = 1;
-        d.winner = w; d.state = 'done'; s.phase = 'podium';
+        // Die Lehrkraft schickt die Reihenfolge aus ihrer Ansicht mit
+        const done = d.fin.findIndex(x => x != null);
+        d.order = cleanOrder(msg.order, d.p.length, done >= 0 ? done : -1);
+        d.winner = d.order[0]; d.state = 'done'; s.phase = 'podium';
         await this.persist(); this.pushAll(); return;
       }
       case 'wipe': {
@@ -155,14 +164,16 @@ export class RoomLogic {
     }
   }
 
+  // Finale für 2 bis 4 Fahrer. msg.p: Spieler in Startreihenfolge, msg.c: Figuren
   applyDuel(s, msg) {
-    const a = String(msg.a || ''), b = String(msg.b || '');
-    if (!s.players[a] || !s.players[b] || a === b) return false;
+    const p = Array.isArray(msg.p) ? msg.p.map(String) : [];
+    if (p.length < 2 || p.length > 4 || new Set(p).size !== p.length || !p.every(pid => s.players[pid])) return false;
+    const c = Array.isArray(msg.c) ? msg.c : [];
     s.duel = {
-      p: [a, b], names: [s.players[a].name, s.players[b].name],
-      chars: [int(msg.ca, 0, CHAR_COUNT - 1, s.players[a].char), int(msg.cb, 0, CHAR_COUNT - 1, s.players[b].char)],
+      p, n: p.length, names: p.map(pid => s.players[pid].name),
+      chars: p.map((pid, i) => int(c[i], 0, CHAR_COUNT - 1, s.players[pid].char)),
       track: int(msg.track, 0, TRACK_COUNT - 1, 0), laps: int(msg.laps, 1, 5, 3),
-      state: 'ready', startAt: 0, fin: [null, null], winner: -1, round: (s.duel && s.duel.round || 0) + 1,
+      state: 'ready', startAt: 0, fin: p.map(() => null), winner: -1, order: null, round: (s.duel && s.duel.round || 0) + 1,
     };
     return true;
   }
@@ -203,7 +214,9 @@ export class RoomLogic {
         const d = s.duel; if (!d || s.phase !== 'duel') return;
         const slot = d.p.indexOf(pid); if (slot < 0 || d.fin[slot] != null) return;
         const time = Number(msg.time); if (!(time > 0)) return;
+        // Wer zuerst im Ziel ist, gewinnt. Die übrigen Plätze meldet das Handy des Siegers aus seiner Sicht
         d.fin[slot] = Math.round(time);
+        d.order = cleanOrder(msg.order, d.p.length, slot);
         d.winner = slot; d.state = 'done'; s.phase = 'podium';
         await this.persist(); this.pushAll(); return;
       }
@@ -231,7 +244,7 @@ export class RoomLogic {
     const d = s.duel;
     return {
       t: 'room', code: s.code, phase: s.phase, quali: s.quali, players, now: this.io.now(),
-      duel: d ? { ...d, online: [on.has(d.p[0]), on.has(d.p[1])] } : null,
+      duel: d ? { ...d, n: d.p.length, online: d.p.map(pid => on.has(pid)) } : null,
     };
   }
   youMsg(pid) {
@@ -240,7 +253,7 @@ export class RoomLogic {
     let duel = null;
     if (d && d.p.includes(pid) && (s.phase === 'duel-setup' || s.phase === 'duel' || s.phase === 'podium')) {
       const slot = d.p.indexOf(pid);
-      duel = { slot, names: d.names, chars: d.chars, track: d.track, laps: d.laps, state: d.state, startAt: d.startAt, fin: d.fin, winner: d.winner, round: d.round };
+      duel = { slot, n: d.p.length, names: d.names, chars: d.chars, track: d.track, laps: d.laps, state: d.state, startAt: d.startAt, fin: d.fin, winner: d.winner, order: d.order, round: d.round };
     }
     return {
       t: 'you', phase: s.phase, quali: s.quali, now: this.io.now(),

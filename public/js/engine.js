@@ -476,7 +476,7 @@ function newRace(cfg){
   const avoid=T.def.items.map(f=>Math.floor(f*N));
   for(let gi=0;gi<10;gi++){let base=Math.floor((gi+.5)/10*N);for(const a of avoid)if(Math.abs(base-a)<14)base+=18;const lat=[-9,0,9,6,-6][gi%5];for(let c=0;c<5;c++){const i=(base+c*2)%N;r.coins.push({x:P[i].x+P[i].nx*lat,y:P[i].y+P[i].ny*lat,on:true});}}
   for(const[f,lat]of T.def.oils||[]){const i=Math.floor(f*N)%N;r.objs.push({type:'oil',perm:true,x:P[i].x+P[i].nx*lat,y:P[i].y+P[i].ny*lat,a:P[i].a,v:0,z:0,vz:0,fly:false,idx:i,lat,life:Infinity,owner:null,grace:0});}
-  cfg.grid.forEach((ci,j)=>{const duel=cfg.mode==='duel';const i=(N-3-(duel?0:j*4)+N)%N,lat=cfg.grid.length>1?(j%2?10:-10):0;
+  cfg.grid.forEach((ci,j)=>{const duel=cfg.mode==='duel';const i=(N-3-(duel?Math.floor(j/2)*4:j*4)+N)%N,lat=cfg.grid.length>1?(j%2?10:-10):0;
     const human=cfg.localSlot!=null?j===cfg.localSlot:(ci===cfg.player&&cfg.mode!=='attract');const k=newKart(ci,human,j);k.remote=duel&&!human;k.name=cfg.names?String(cfg.names[j]||''):'';
     k.x=P[i].x+P[i].nx*lat;k.y=P[i].y+P[i].ny*lat;k.a=P[i].a;k.idx=i;k.prevIdx=i;k.coins=ttLike?0:2+Math.round(j*3/7);k.ai.lane=lat;r.karts.push(k);});
   r.player=r.karts.find(k=>k.human)||null;
@@ -639,7 +639,7 @@ function fireProj(k,type,dir){
 function fireComet(k){const lead=R.karts.find(o=>o.place===1);R.objs.push(netObj({type:'comet',x:k.x,y:k.y,a:k.a,v:4.6,z:6,idx:k.idx,lat:k.lat,life:1800,owner:k,grace:lead===k?Math.floor(R.N*.8/1.15):30,target:lead,hits:new Set([k])}));if(k.human)SFX.comet();}
 function boltHit(o){if(o.ghost>0||o.star>0||o.fall>0||o.remote)return;o.small=180+(R.karts.length-o.place)*22;o.item=null;o.itemN=0;o.roul=0;o.trail=null;o.orbit=null;o.spin=Math.max(o.spin,30);if(o.drift)endDrift(o,false);o.boost=0;}
 function useBolt(k){R.flash=14;SFX.bolt();for(const o of R.karts)if(o!==k)boltHit(o);if(R.player&&R.player!==k&&R.player.small>0)SFX.shrink();if(k.human)netEv({k:'bolt'});}
-function useGhost(k){k.ghost=360;if(k.human)SFX.ghost();const c=R.karts.filter(o=>o!==k&&o.item&&!o.roul);if(c.length&&!k.item){const v=c[(Math.random()*c.length)|0];if(v.remote){if(k.human)netEv({k:'steal'});}else{k.item=v.item;k.itemN=v.itemN;v.item=null;v.itemN=0;}}}
+function useGhost(k){k.ghost=360;if(k.human)SFX.ghost();const c=R.karts.filter(o=>o!==k&&o.item&&!o.roul);if(c.length&&!k.item){const v=c[(Math.random()*c.length)|0];if(v.remote){if(k.human)netEv({k:'steal',to:R.karts.indexOf(v)});}else{k.item=v.item;k.itemN=v.itemN;v.item=null;v.itemN=0;}}}
 function orbitPos(k,i){const a=R.t*.16+i*TAU/3;return[k.x+Math.cos(a)*8,k.y+Math.sin(a)*8];}
 function trailPos(k){return[k.x-Math.cos(k.a)*8,k.y-Math.sin(k.a)*8];}
 function updateObjs(){
@@ -780,7 +780,9 @@ function remoteUpdate(k){
   if(k.boost>0)k.boost--;if(k.star>0)k.star--;if(k.small>0)k.small--;if(k.ghost>0)k.ghost--;if(k.squish>0)k.squish--;if(k.inv>0)k.inv--;
   if(k.spin>0){k.spin--;k.spinA+=.42;}else k.spinA=0;
   if(k.fall>0)k.fall--;
-  const n=k.net;if(!n||!n.init)return;
+  const n=k.net;
+  k.stale=R.state==='run'&&R.t>150&&(!n||!n.init||performance.now()-n.at>2500);
+  if(!n||!n.init)return;
   const age=Math.min(10,(performance.now()-n.at)/(1000/60));
   const tx=n.x+n.vx*age,ty=n.y+n.vy*age,dx=tx-k.x,dy=ty-k.y;
   if(dx*dx+dy*dy>35*35){k.x=tx;k.y=ty;}else{k.x+=dx*.35;k.y+=dy*.35;}
@@ -806,8 +808,8 @@ function netIn(m){
     case 'obj':spawnRemoteObj(k,e);break;
     case 'kill':for(const o of R.objs)if(o.nid===e.nid)o.dead=true;break;
     case 'bolt':R.flash=14;SFX.bolt();for(const o of R.karts)if(o!==k)boltHit(o);if(R.player&&R.player.small>0)SFX.shrink();break;
-    case 'steal':{const me=R.player;if(me&&me.item&&!me.roul){netEv({k:'give',item:me.item,n:me.itemN});me.item=null;me.itemN=0;}break;}
-    case 'give':{const me=R.player;if(me&&!me.item&&ITEM_CODES.includes(e.item)){me.item=e.item;me.itemN=e.item==='turbo3'?clamp(e.n|0,1,3):0;SFX.get();}break;}
+    case 'steal':{const me=R.player;if(me&&R.net&&e.to===R.net.slot&&me.item&&!me.roul){netEv({k:'give',to:m.slot,item:me.item,n:me.itemN});me.item=null;me.itemN=0;}break;}
+    case 'give':{const me=R.player;if(me&&R.net&&e.to===R.net.slot&&!me.item&&ITEM_CODES.includes(e.item)){me.item=e.item;me.itemN=e.item==='turbo3'?clamp(e.n|0,1,3):0;SFX.get();}break;}
   }
 }
 
@@ -890,12 +892,13 @@ function playerFinished(k){
 // ====================================================================
 // Darstellung: Mode 7, Panorama, Sprites
 // ====================================================================
-function makeView(canvas){const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;const im=c.createImageData(W2,GH);return{canvas,ctx:c,gimg:im,gbuf:new Uint32Array(im.data.buffer),V:{x:0,y:0,a:0,fx:1,fy:0,rx:0,ry:1,dist:CAMD},cam:{x:0,y:0,a:0,tgt:null}};}
+const ROWS={};
+function rowsFor(gs){let r=ROWS[gs];if(!r){const n=(H-HOR)*gs,d=new Float32Array(n),f=new Float32Array(n);for(let y=0;y<n;y++){const dd=CAMH*F/((y+.5)/gs);d[y]=dd;f[y]=clamp((dd-170)/650,0,.85);}r=ROWS[gs]={d,f};}return r;}
+function makeView(canvas,gs){gs=gs||GS;if(canvas.width!==W*gs){canvas.width=W*gs;canvas.height=H*gs;}const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;const im=c.createImageData(W*gs,(H-HOR)*gs);return{gs,canvas,ctx:c,gimg:im,gbuf:new Uint32Array(im.data.buffer),V:{x:0,y:0,a:0,fx:1,fy:0,rx:0,ry:1,dist:CAMD},cam:{x:0,y:0,a:0,tgt:null}};}
 const mainCanvas=$('#game'),mainView=mainCanvas?makeView(mainCanvas):null;
 if(mainView)cam=mainView.cam;
 let ctx=mainView?mainView.ctx:null,gimg=mainView?mainView.gimg:null,gbuf=mainView?mainView.gbuf:null;
-const rowD=new Float32Array(GH),rowFog=new Float32Array(GH);
-for(let y=0;y<GH;y++){const d=CAMH*F/((y+.5)/GS);rowD[y]=d;rowFog[y]=clamp((d-170)/650,0,.85);}
+let vgs=GS,rowD=rowsFor(GS).d,rowFog=rowsFor(GS).f;
 let V=mainView?mainView.V:{x:0,y:0,a:0,fx:1,fy:0,rx:0,ry:1,dist:CAMD};
 const tintCv=mk(SPR,SPR),tintG=tintCv.getContext('2d');
 function setView(){
@@ -909,17 +912,17 @@ function setView(){
 }
 function drawGround(T){
   const tex=T.tex,ot=T.outTile,{fx,fy,rx,ry}=V,hz=hex(T.th.haze),hr=hz[0],hg=hz[1],hb=hz[2];let o=0;
-  const x0=.5/GS-CX;
-  for(let y=0;y<GH;y++){
-    const d=rowD[y],st=d/F,f=rowFog[y];let wx=(V.x+fx*d+rx*st*x0)*TS,wy=(V.y+fy*d+ry*st*x0)*TS;const sx=rx*st/GS*TS,sy=ry*st/GS*TS;
-    for(let x=0;x<W2;x++){
+  const x0=.5/vgs-CX,GHv=(H-HOR)*vgs,W2v=W*vgs;
+  for(let y=0;y<GHv;y++){
+    const d=rowD[y],st=d/F,f=rowFog[y];let wx=(V.x+fx*d+rx*st*x0)*TS,wy=(V.y+fy*d+ry*st*x0)*TS;const sx=rx*st/vgs*TS,sy=ry*st/vgs*TS;
+    for(let x=0;x<W2v;x++){
       const ix=wx|0,iy=wy|0;
       let c=(wx>=0&&wy>=0&&ix<TMAP&&iy<TMAP)?tex[(iy<<11)|ix]:ot[((iy&127)<<7)|(ix&127)];
       if(f>0){const r=c&255,g=(c>>8)&255,b=(c>>16)&255;c=(0xff000000|((b+(hb-b)*f)<<16)|((g+(hg-g)*f)<<8)|(r+(hr-r)*f))>>>0;}
       gbuf[o++]=c;wx+=sx;wy+=sy;
     }
   }
-  ctx.putImageData(gimg,0,HOR*GS);
+  ctx.putImageData(gimg,0,HOR*vgs);
 }
 function drawSky(T){const off=Math.floor((((V.a/TAU*PW)%PW)+PW)%PW),w1=Math.min(W,PW-off);ctx.drawImage(T.pano,off,0,w1,HOR,0,0,w1,HOR);if(w1<W)ctx.drawImage(T.pano,0,0,W-w1,HOR,w1,0,W-w1,HOR);}
 const DL=[];
@@ -963,6 +966,7 @@ function drawKart(e){
   let alpha=1;
   if(k.ghost>0)alpha=k===cam.tgt?.45:(R.t&4?.18:.08);
   if(k.inv>0&&k.spin<=0&&k.squish<=0&&(R.t&2))alpha*=.5;
+  if(k.stale)alpha*=.45;
   if(k.fall>70){sc*=Math.max(0,1-(k.fallMax-k.fall)/30);if(sc<=.02)return;}
   ctx.globalAlpha=alpha;
   if(k.fall<=0||k.fall>70){ctx.fillStyle='rgba(10,8,20,.35)';ctx.beginPath();ctx.ellipse(e.sx,e.gy,4.8*s*sc,1.7*s*sc,0,0,TAU);ctx.fill();}
@@ -996,7 +1000,8 @@ function drawMini(T){
 }
 function renderView(view){
   if(!R||!view)return;ctx=view.ctx;gimg=view.gimg;gbuf=view.gbuf;V=view.V;cam=view.cam;if(!cam.tgt)return;
-  const T=R.T;setView();ctx.setTransform(1,0,0,1,0,0);drawGround(T);ctx.setTransform(GS,0,0,GS,0,0);ctx.imageSmoothingEnabled=false;drawSky(T);drawSprites(T);drawLights();drawGo();drawMini(T);
+  vgs=view.gs||GS;{const r=rowsFor(vgs);rowD=r.d;rowFog=r.f;}
+  const T=R.T;setView();ctx.setTransform(1,0,0,1,0,0);drawGround(T);ctx.setTransform(vgs,0,0,vgs,0,0);ctx.imageSmoothingEnabled=false;drawSky(T);drawSprites(T);drawLights();drawGo();drawMini(T);
   if(R.flash>0){ctx.fillStyle=`rgba(255,255,255,${R.flash/16})`;ctx.fillRect(0,0,W,H);}
 }
 function render(){renderView(mainView);if(mainView)cam=mainView.cam;}

@@ -205,3 +205,56 @@ body.teacher .chip{font-size:.75em}
   .ranking.many{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+.field4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;text-align:center}
+.field4 > div{background:var(--deep);border:2px solid var(--line);border-radius:12px;padding:6px 4px;min-width:0}
+.field4 > div.me{border-color:var(--sun)}
+.field4 canvas{width:100%;max-width:72px;aspect-ratio:1;image-rendering:pixelated}
+.field4 b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.field4 span{font-size:11px;color:var(--muted)}
+
+/* ---------- Finale mit 2–4 Fahrern */
+.thead.row{flex-direction:row;align-items:flex-end;justify-content:space-between;gap:1em;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--panel);border:2px solid var(--line);border-radius:.8em;padding:.25em;gap:.25em}
+.seg button{font:inherit;font-weight:700;padding:.5em .9em;border-radius:.55em;border:0;background:transparent;color:var(--text);cursor:pointer}
+.seg button[aria-checked="true"]{background:var(--sun);color:#24104a}
+.seg button:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.slothead{display:flex;justify-content:space-between;align-items:center;gap:.3em .9em;flex-wrap:wrap}
+.duo.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.duo.n4{grid-template-columns:repeat(2,minmax(0,1fr))}
+.duo.n3 .slot,.duo.n4 .slot{padding:.8em;gap:.5em}
+.duo.n4 .slot .figs{grid-template-columns:repeat(8,minmax(0,4.6em));justify-content:start}
+.tgrid2b{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2em;align-items:start}
+
+/* 2×2-Ansicht: Bilder so groß wie die Bildschirmhöhe erlaubt, Namen als Schild unten links */
+.split.n3,.split.n4{grid-template-columns:repeat(2,auto);justify-content:center;align-content:center;gap:.7em}
+.split.n3 .sv,.split.n4 .sv{position:relative}
+.split.n3 .svstage,.split.n4 .svstage{width:auto;height:calc((100dvh - 11em)/2);max-height:none;aspect-ratio:3/2;max-width:calc((100vw - 3em)/2)}
+.split.n3 .svbar,.split.n4 .svbar{position:absolute;left:.5em;bottom:.5em;z-index:2;max-width:64%;background:rgba(21,26,68,.88);gap:.45em;padding:.15em .55em}
+.split.n3 .svname,.split.n4 .svname{font-size:2em}
+.split.n3 .svlap,.split.n4 .svlap{font-size:1.3em}
+.split.n3 .svpos,.split.n4 .svpos{font-size:2.1em;margin-left:.15em}
+.split.n3 .svfin,.split.n4 .svfin{font-size:2.2em}
+.svwarn{position:absolute;left:50%;top:24%;transform:translate(-50%,-50%);z-index:3;font-family:var(--f-display);font-size:2.4em;color:#ffd6e0;background:rgba(70,12,34,.88);border:2px solid #ff5a7a;padding:.2em .6em;border-radius:.4em;white-space:nowrap}
+.split.n3 .svwarn,.split.n4 .svwarn{font-size:1.6em}
+.mapstage{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:.7em;align-items:center;padding:.7em;background:var(--card)}
+.svstage.mapstage canvas{position:static;inset:auto}
+.mapstage .ovmap{width:100%;height:auto;aspect-ratio:1}
+
+/* Übersicht: Führender groß, daneben Platzierung und Karte */
+.overview{display:grid;grid-template-columns:minmax(0,1fr) minmax(14em,22em);gap:1.2em;flex:1;min-height:0;align-items:start}
+.ovmain{display:flex;flex-direction:column;gap:.4em;min-width:0;align-items:center}
+.ovmain .svbar{align-self:stretch}
+.ovmain .svstage{width:auto;height:calc(100dvh - 14em);max-width:100%;max-height:none;aspect-ratio:3/2}
+.ovside{display:flex;flex-direction:column;gap:1em;min-width:0}
+.ovrank{list-style:none;margin:0;padding:0;display:grid;gap:.35em;align-content:start;min-width:0}
+.ovrank li{display:grid;grid-template-columns:2em 2.2em minmax(0,1fr);grid-template-areas:"rk ic nm" "rk ic lp";align-items:center;column-gap:.5em;padding:.3em .6em;border-radius:.6em;background:var(--panel);border:2px solid var(--line)}
+.ovrank .rk{grid-area:rk;font-family:var(--f-display);font-size:1.8em;color:var(--sun)}
+.ovrank canvas{grid-area:ic;width:2.2em;height:2.2em;image-rendering:pixelated}
+.ovrank .nm{grid-area:nm;font-weight:700;font-size:1.35em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ovrank .lp{grid-area:lp;color:var(--muted);font-weight:600}
+.ovrank li.stale .lp{color:#ffc2cf}
+.ovrank.mini li{padding:.2em .5em}
+.ovrank.mini .nm{font-size:1.15em}
+.ovrank.mini .rk{font-size:1.4em}
+.ovmap{width:100%;height:auto;aspect-ratio:1;background:var(--deep);border-radius:.8em;border:2px solid var(--line)}
+.wincv.steps{aspect-ratio:58/33;width:min(100%,calc(58vh*1.76),1100px)}

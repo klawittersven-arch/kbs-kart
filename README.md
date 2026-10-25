@@ -43,11 +43,16 @@ Voraussetzung: ein kostenloses Cloudflare-Konto und dieses Repository bei GitHub
    - Gefahren wird im Zeitfahren mit 3× Turbo, wie im Einzelspiel.
    - Während des Rennens ist das Handy **nicht** mit dem Server verbunden. Erst im Ziel wird die Gesamtzeit einmal gesendet. Das schont das Schul-WLAN.
 4. **Die Zeiten erscheinen live am Beamer**, sortiert nach Gesamtzeit. Unpassende Namen entfernst du mit dem **×** neben dem Eintrag. Mit **Qualifying neu starten** beginnt eine neue Runde mit denselben Einstellungen und demselben QR-Code; die bisherigen Zeiten werden dabei gelöscht.
-5. **Finale einrichten:** Die zwei Schnellsten sind vorausgewählt, alle anderen Handys werden getrennt. Fahrer, Figuren, Strecke und Rundenzahl lassen sich noch ändern. Sobald beide Handys als „verbunden“ angezeigt werden: **Rennen starten**.
-6. **Live-Duell:** Beide fahren gleichzeitig auf ihrem Handy. Der Beamer zeigt beide Sichten nebeneinander mit Namen. Rempeln, Items, Blitz und Phantom wirken zwischen den beiden.
+5. **Finale einrichten:** Wähle oben **2, 3 oder 4 Fahrer**. Die Schnellsten aus dem Qualifying sind vorausgewählt, und wer schneller war, startet weiter vorn. Über die Auswahllisten tauschst du Fahrer aus, außerdem lassen sich Figuren, Strecke und Rundenzahl ändern. Sobald alle Handys als „verbunden“ angezeigt werden: **Rennen starten**.
+   - Die Handys der übrigen SuS zeigen „Das Finale läuft am Beamer“. Sie dürfen geschlossen werden. Bleibt die Seite offen, springt sie von selbst ins Finale, falls du die Person noch auswählst.
+6. **Live-Finale:** Alle Fahrer fahren gleichzeitig auf ihrem Handy. Rempeln, Items, Blitz und Phantom wirken zwischen allen. Der Beamer hat zwei Ansichten, umschaltbar mit dem Knopf unten in der Mitte:
+   - **Alle Bildschirme:** bei 2 Fahrern nebeneinander, bei 3 oder 4 Fahrern als 2×2-Raster mit Namen, Runde und Platz. Bei 3 Fahrern zeigt das vierte Feld die Streckenkarte mit allen Fahrern und die aktuelle Reihenfolge.
+   - **Übersicht:** die Sicht des Führenden groß, daneben Reihenfolge und Streckenkarte. Gut lesbar auch in großen Räumen.
+   - Ist ein Laptop zu langsam für mehrere Sichten, zeichnet das Spiel die Strecke automatisch mit halber Auflösung.
+   - Verliert ein Handy die Verbindung, steht „Verbindung weg“ über seinem Bild und der Wagen bleibt stehen. Die anderen fahren normal weiter. Kommt die Verbindung zurück, springt der Wagen an seine richtige Stelle, denn das Handy fährt im Hintergrund weiter. Nur wenn die Seite neu geladen wird, beginnt die Person wieder am Start.
    - Wer zuerst im Ziel ist, gewinnt. Zwei Sekunden später erscheint automatisch die Siegerehrung.
-   - Mit **Rennen beenden** brichst du jederzeit ab. Dann gewinnt, wer gerade vorne liegt.
-7. **Siegerehrung** am Beamer: großes Spielerbild mit Pokal und Namen. Danach **Revanche**, **Anderes Finale** oder **Zurück zum Qualifying**.
+   - Mit **Rennen beenden** brichst du jederzeit ab. Dann zählt die Reihenfolge in diesem Moment.
+7. **Siegerehrung** am Beamer: Bei 2 Fahrern großes Spielerbild mit Pokal, bei 3 oder 4 Fahrern ein Treppchen mit den ersten drei. Die Handys zeigen jedem seinen Platz. Danach **Revanche**, **Anderes Finale** oder **Zurück zum Qualifying**.
 
 **Tipps**
 - Im Finale die Handys **quer** halten, dann liegen die Tasten links und rechts vom Bild.
@@ -102,6 +107,6 @@ Voraussetzung: Handys und Laptop sind im selben WLAN, und das WLAN erlaubt Verbi
 | `server/local.mjs` | Lokaler Server ohne Zusatzpakete |
 | `wrangler.jsonc` | Cloudflare-Konfiguration |
 
-**Datenverkehr:** Im Qualifying sendet jedes Handy zwei kurze Nachrichten (Anmeldung und Endzeit). Im Duell schicken die beiden Handys etwa 20 kleine Positions-Pakete pro Sekunde. Jedes Handy berechnet seinen eigenen Wagen. Treffer entscheidet das Handy des getroffenen Fahrers, damit sich niemand ungerecht getroffen fühlt.
+**Datenverkehr:** Im Qualifying sendet jedes Handy zwei kurze Nachrichten (Anmeldung und Endzeit). Im Finale schickt jedes Fahrer-Handy etwa 20 kleine Positions-Pakete pro Sekunde (rund 3 KB/s), bei 4 Fahrern empfängt jedes Handy die Pakete der drei anderen (rund 10 KB/s). Das schafft jedes Schul-WLAN. Jedes Handy berechnet seinen eigenen Wagen. Treffer entscheidet das Handy des getroffenen Fahrers, damit sich niemand ungerecht getroffen fühlt.
 
 **Lizenzen:** Schriften Bungee, Rubik und Silkscreen unter SIL Open Font License (siehe `public/fonts/`). QR-Code-Generator von Kazuhiko Arase unter MIT-Lizenz (`public/js/qrcode.js`). Das Schullogo gehört der Karoline-Breitinger-Schule.
