@@ -1322,11 +1322,15 @@ addEventListener('touchstart',()=>enableTouch(),{passive:true,once:true});
 if(matchMedia('(pointer:coarse)').matches&&!matchMedia('(pointer:fine)').matches)enableTouch();
 document.querySelectorAll('.pbtn').forEach(b=>{
   const k=b.dataset.k;
-  const on=e=>{e.preventDefault();AU.init();touch[k]=true;b.classList.add('active');try{b.setPointerCapture(e.pointerId);}catch(_){}};
+  const on=e=>{e.preventDefault();clearSel();AU.init();touch[k]=true;b.classList.add('active');try{b.setPointerCapture(e.pointerId);}catch(_){}};
   const off=e=>{touch[k]=false;b.classList.remove('active');};
   b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('lostpointercapture',off);
   b.addEventListener('contextmenu',e=>e.preventDefault());
+  // iPhone: Langes Drücken soll weder Text markieren noch die Lupe oder ein Menü öffnen
+  b.addEventListener('touchstart',e=>{if(e.cancelable)e.preventDefault();},{passive:false});
 });
+function clearSel(){try{const s=getSelection();if(s&&s.rangeCount&&!(document.activeElement&&/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)))s.removeAllRanges();}catch(_){}}
+document.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(MODE!=='teacher'&&!(t&&t.closest&&t.closest('input,textarea')))e.preventDefault();});
 onEl('#stage','pointerdown',()=>AU.init());
 {const b=$('#btnSound');if(b)b.textContent='Ton: '+(S.sound?'an':'aus');}AU.on=S.sound;AU.music=S.music;
 

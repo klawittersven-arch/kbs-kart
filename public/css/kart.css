@@ -18,6 +18,11 @@ img{max-width:100%}
 [hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--ink);color:var(--text);font-family:var(--f-body);-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+/* Spielseiten: kein Markieren von Text und kein „Kopieren/Ausschneiden“-Menü bei langem Drücken (iPhone).
+   Eingabefelder bleiben normal bedienbar. Die Lehrerseite ist ausgenommen. */
+body:not(.teacher){-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body:not(.teacher) input,body:not(.teacher) textarea,body:not(.teacher) select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+button,.chip,.pbtn{touch-action:manipulation;-webkit-touch-callout:none}
 .app{min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:12px;padding-block:12px 22px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .top{width:100%;max-width:960px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .brand{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(20px,4vw,28px);line-height:1;color:var(--sun);text-shadow:0 3px 0 var(--sun-deep),0 5px 0 rgba(0,0,0,.4);letter-spacing:.01em}
@@ -136,7 +141,7 @@ body{background:var(--ink);color:var(--text);font-family:var(--f-body);-webkit-t
 .pad{display:flex;gap:12px;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none}
 .pad-l{grid-area:padl}
 .pad-r{grid-area:padr;display:grid;grid-template-columns:repeat(2,auto);gap:10px}
-.pbtn{font-family:var(--f-display);font-size:22px;color:var(--text);background:var(--panel);border:3px solid var(--line);border-radius:50%;width:68px;height:68px;display:grid;place-items:center;line-height:1;touch-action:none;padding:0}
+.pbtn{font-family:var(--f-display);font-size:22px;color:var(--text);background:var(--panel);border:3px solid var(--line);border-radius:50%;width:68px;height:68px;display:grid;place-items:center;line-height:1;touch-action:none;padding:0;-webkit-user-select:none;user-select:none}
 .pbtn small{font-family:var(--f-pixel);font-size:9px;color:var(--muted);margin-top:-14px}
 .pad-l .pbtn{width:78px;height:78px;border-radius:18px;font-size:26px}
 .pbtn.a{background:var(--cherry);border-color:#ffd0da}
