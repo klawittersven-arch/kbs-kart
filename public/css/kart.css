@@ -23,6 +23,10 @@ body{background:var(--ink);color:var(--text);font-family:var(--f-body);-webkit-t
 body:not(.teacher){-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 body:not(.teacher) input,body:not(.teacher) textarea,body:not(.teacher) select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 button,.chip,.pbtn{touch-action:manipulation;-webkit-touch-callout:none}
+/* iPhone (Safari): zwei schnelle Berührungen zoomen sonst ins Bild, dann ragen Steuerung und Spielbild aus dem Bildschirm.
+   manipulation verbietet nur das Doppeltipp-Zoomen; Scrollen und Zoomen mit zwei Fingern gehen weiter. Für alle Elemente,
+   weil Safari die Einstellung nicht in scrollbare Bereiche weitergibt. Steuerknöpfe (.pad, .pbtn) bleiben bei none. */
+*{touch-action:manipulation}
 .app{min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:12px;padding-block:12px 22px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .top{width:100%;max-width:960px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .brand{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(20px,4vw,28px);line-height:1;color:var(--sun);text-shadow:0 3px 0 var(--sun-deep),0 5px 0 rgba(0,0,0,.4);letter-spacing:.01em}

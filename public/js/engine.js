@@ -1331,6 +1331,11 @@ document.querySelectorAll('.pbtn').forEach(b=>{
 });
 function clearSel(){try{const s=getSelection();if(s&&s.rangeCount&&!(document.activeElement&&/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)))s.removeAllRanges();}catch(_){}}
 document.addEventListener('selectstart',e=>{const t=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;if(MODE!=='teacher'&&!(t&&t.closest&&t.closest('input,textarea')))e.preventDefault();});
+// iPhone: schnelles Tippen darf nicht ins Bild zoomen. Das CSS (touch-action) verhindert das meist schon; zusätzlich zählt
+// im Spielbereich die zweite von zwei schnellen Berührungen nicht als Doppeltipp (Knöpfe ausgenommen, die sollen klicken),
+// und während des Rennens ist das Zoomen mit zwei Fingern gesperrt (ein Daumen lenkt, der andere gibt Gas).
+{const c=$('#console');if(c){let last=0;c.addEventListener('touchend',e=>{const quick=e.timeStamp-last<450;last=e.timeStamp;const t=e.target;if(quick&&e.cancelable&&!(t&&t.closest&&t.closest('button,a,input,label,select,textarea')))e.preventDefault();},{passive:false});}}
+for(const t of['gesturestart','gesturechange'])document.addEventListener(t,e=>{if(screenName==='race')e.preventDefault();},{passive:false});
 onEl('#stage','pointerdown',()=>AU.init());
 {const b=$('#btnSound');if(b)b.textContent='Ton: '+(S.sound?'an':'aus');}AU.on=S.sound;AU.music=S.music;
 
