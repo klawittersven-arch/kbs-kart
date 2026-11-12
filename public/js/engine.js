@@ -1318,8 +1318,18 @@ onEl('#btnPause','click',()=>{AU.init();togglePause();});
 onEl('#btnSound','click',e=>{AU.init();S.sound=!S.sound;AU.setOn(S.sound);e.currentTarget.textContent='Ton: '+(S.sound?'an':'aus');e.currentTarget.setAttribute('aria-pressed',String(S.sound));persist();});
 onEl('#btnFull','click',()=>{const el=$('#console');try{if(document.fullscreenElement)document.exitFullscreen();else{const p=el.requestFullscreen&&el.requestFullscreen();if(p&&p.catch)p.catch(()=>{});}}catch(e){}});
 function enableTouch(){if(usingTouch)return;usingTouch=true;const c=$('#console');if(c)c.classList.add('touch');for(const id of['#padL','#padR']){const p=$(id);if(p)p.hidden=false;}if(screenName==='title'&&MODE==='single')showTitle('gp');}
+// Touch-Steuerung gleich zeigen, wenn das Gerät ein Handy oder Tablet mit Touchscreen ist. Die Abfrage (pointer:coarse) allein
+// reicht nicht: manche Android-Handys melden „Maus“ (mit Stift, Bluetooth-Tastatur oder -Maus, in manchen Browsern). Laptops mit
+// Touchscreen bleiben bei der Tastatur, bis man den Bildschirm berührt; spätestens die erste Berührung blendet die Knöpfe ein.
+function touchDevice(){
+  const mq=q=>{try{return matchMedia(q).matches;}catch(_){return false;}};
+  const ua=navigator.userAgent||'',pts=navigator.maxTouchPoints||0;
+  const mobile=/Android|iPhone|iPad|iPod|Mobile/i.test(ua)||(/Macintosh/.test(ua)&&pts>1);
+  return (mq('(pointer:coarse)')&&!mq('(pointer:fine)'))||(MODE!=='teacher'&&mobile&&(pts>0||'ontouchstart' in window||mq('(any-pointer:coarse)')));
+}
 addEventListener('touchstart',()=>enableTouch(),{passive:true,once:true});
-if(matchMedia('(pointer:coarse)').matches&&!matchMedia('(pointer:fine)').matches)enableTouch();
+addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.pointerType==='pen')enableTouch();},{passive:true});
+if(touchDevice())enableTouch();
 document.querySelectorAll('.pbtn').forEach(b=>{
   const k=b.dataset.k;
   const on=e=>{e.preventDefault();clearSel();AU.init();touch[k]=true;b.classList.add('active');try{b.setPointerCapture(e.pointerId);}catch(_){}};
